@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+*.egg-info/
+
+# Entorno y credenciales — nunca al repositorio, que es público
+.env
+.env.*
+*.key
+credenciales*.json
+
+# Android
+app/build/
+app/.gradle/
+app/local.properties
+*.apk
+*.aab
+
+# Datos pesados: audio, grabaciones y capturas del instrumento
+*.wav
+*.mp3
+*.m4a
+datos/crudos/
+
+# Sistema operativo y editores
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
