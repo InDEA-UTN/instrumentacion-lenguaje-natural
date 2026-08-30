@@ -19,6 +19,10 @@ app/local.properties
 *.apk
 *.aab
 
+# Node (front-web)
+node_modules/
+app/front-web/dist/
+
 # Datos pesados: audio, grabaciones y capturas del instrumento
 *.wav
 *.mp3
@@ -30,3 +34,7 @@ datos/crudos/
 Thumbs.db
 .idea/
 .vscode/
+
+# Modelos y datos de prueba 
+modelos/whisper/*.bin
+audio_ejemplos

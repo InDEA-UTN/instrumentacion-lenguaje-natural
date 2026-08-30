@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prueba de transcripción — whisper.cpp</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 480px;
+        margin: 4rem auto;
+        padding: 0 1rem;
+        text-align: center;
+      }
+      button {
+        font-size: 1.1rem;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        border: 1px solid #333;
+        cursor: pointer;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+      .medidor {
+        margin-top: 1.5rem;
+        height: 12px;
+        background: #eee;
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .medidor-nivel {
+        height: 100%;
+        width: 100%;
+        background: #d00;
+        transform-origin: left;
+        transform: scaleX(0);
+        transition: transform 0.05s linear;
+      }
+      .resultado {
+        margin-top: 2rem;
+        text-align: left;
+        white-space: pre-wrap;
+      }
+      .error {
+        color: #b00020;
+        margin-top: 1rem;
+      }
+      .spinner {
+        display: inline-block;
+        width: 1em;
+        height: 1em;
+        border: 2px solid #999;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: girar 0.8s linear infinite;
+        margin-right: 0.5em;
+        vertical-align: middle;
+      }
+      @keyframes girar {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

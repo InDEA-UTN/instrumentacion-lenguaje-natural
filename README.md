@@ -79,6 +79,7 @@ El plan completo, con objetivos específicos y criterios de aceptación de cada 
 | [`app/`](app/) | Aplicación Android de captura de audio. |
 | [`servidor/`](servidor/) | Servicio que transcribe, interpreta, valida y envía los comandos. |
 | [`instrumentos/`](instrumentos/) | Una ficha por instrumento: interfaz física, comandos disponibles y límites. |
+| [`modelos/`](modelos/) | Binarios de modelos con los que se experimenta (ASR, y luego modelos de lenguaje locales); no versionados, con su registro de pruebas. |
 
 ## Cómo se trabaja acá
 
