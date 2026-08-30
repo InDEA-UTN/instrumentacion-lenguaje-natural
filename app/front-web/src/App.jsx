@@ -70,6 +70,7 @@ export default function App() {
 
       const formData = new FormData()
       formData.append('file', wavBlob, 'audio.wav')
+      formData.append('language', 'es')
 
       const respuesta = await fetch(WHISPER_URL, { method: 'POST', body: formData })
       if (!respuesta.ok) {
