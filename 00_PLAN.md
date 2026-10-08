@@ -53,7 +53,7 @@ existe para descubrir los problemas reales de la idea.
 
 Alcance mínimo:
 
-- Aplicación Android que captura audio y lo envía al servidor.
+- Aplicación web (PWA) que captura audio y lo envía al servidor.
 - Servidor que transcribe, interpreta, **valida** y ejecuta.
 - Realimentación al usuario: qué entendió el sistema y qué hizo o por qué se negó.
 - Un pedido fuera del catálogo se **rechaza explícitamente**; nunca se aproxima al comando más
@@ -97,7 +97,7 @@ Para que el alcance no se corra sin que nadie lo note, queda explícito lo que *
   programación documentada.
 - Automatización de secuencias de medición completas o generación de informes. El sistema configura
   el instrumento; no reemplaza al operador.
-- Aplicación para iOS. La captura es Android.
+- Aplicaciones nativas para Android o iOS. La captura es una aplicación web (PWA).
 - Cualquier acción sobre el instrumento que pueda dañarlo o dañar al circuito bajo prueba. El
   catálogo es cerrado y sus límites son parte del diseño.
 
@@ -117,4 +117,5 @@ Se anotan acá para no volver a discutirlas. Mientras la tabla esté vacía, tod
 | Fecha | Decisión | Motivo |
 |---|---|---|
 | 2026-08-27 | El modelo de lenguaje **no emite SCPI**: emite una intención estructurada y una capa determinística la traduce y la valida. | Hace auditable lo que llega al instrumento y acota el daño de una interpretación errónea. |
+| 2026-10-08 | La aplicación de captura es una **aplicación web progresiva (PWA)**, no una aplicación nativa Android o iOS. | Un solo código corre en cualquier dispositivo con navegador, se instala sin tienda de aplicaciones y comparte la base del front web de prueba. |
 | 2026-08-27 | El repositorio es **público**, con licencia MIT. | El proyecto es de investigación aplicada y no maneja datos sensibles. |

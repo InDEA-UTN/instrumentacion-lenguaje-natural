@@ -1,7 +1,7 @@
 # Front web de prueba
 
 Cliente mínimo para probar el servicio de transcripción (whisper.cpp) grabando audio desde el
-navegador. No es la app Android del proyecto: es una herramienta de testing manual para la fase 0
+navegador. No es la app de captura del proyecto (la PWA): es una herramienta de testing manual para la fase 0
 (decisión D2).
 
 ## Uso

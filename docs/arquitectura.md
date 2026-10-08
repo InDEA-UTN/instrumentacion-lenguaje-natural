@@ -11,7 +11,7 @@ extremos hay cinco etapas:
 
 ```mermaid
 flowchart TD
-    A["1 · Captura<br/>aplicación Android"] -->|audio| B["2 · Transcripción<br/>ASR: voz a texto"]
+    A["1 · Captura<br/>aplicación web (PWA)"] -->|audio| B["2 · Transcripción<br/>ASR: voz a texto"]
     B -->|texto| C["3 · Interpretación<br/>modelo de lenguaje"]
     C -->|intención estructurada| D["4 · Validación y traducción<br/>código determinístico"]
     D -->|cadena SCPI| E["5 · Ejecución<br/>PyVISA"]
@@ -55,7 +55,11 @@ instrumento, y vuelve imposible razonar sobre qué puede y qué no puede pasar.
 
 ## 3. Las etapas, una por una
 
-### 3.1 Captura — aplicación Android
+### 3.1 Captura — aplicación web (PWA)
+
+Es una aplicación web progresiva (PWA): corre en el navegador de cualquier dispositivo —celular
+Android o iOS, tablet o computadora del laboratorio— y se puede instalar en la pantalla de inicio
+sin pasar por una tienda de aplicaciones.
 
 Graba el audio mientras el usuario mantiene presionado un botón y lo envía al servidor. Muestra la
 transcripción, la acción interpretada y el resultado.
