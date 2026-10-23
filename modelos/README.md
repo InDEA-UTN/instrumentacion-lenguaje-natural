@@ -1,6 +1,6 @@
 # Modelos
 
-Directorio para los binarios de los modelos con los que se experimenta —motores de ASR, y más
+Directorio para los archivos de los modelos con los que se experimenta —motores de ASR, y más
 adelante modelos de lenguaje locales de la fase 3—. Es insumo de la decisión **D2**
 ([`../docs/estado_del_arte.md`](../docs/estado_del_arte.md)) y de la fase 3
 ([`../docs/dataset.md`](../docs/dataset.md)).
@@ -20,9 +20,9 @@ modelos/
 
 ## Registro de modelos probados
 
-| Modelo | Familia | De dónde sale | Para qué | Resultado |
-|---|---|---|---|---|
-| *(vacío — se completa al probar el primero)* | | | | |
+| Modelo                                       | Familia | De dónde sale | Para qué | Resultado |
+| -------------------------------------------- | ------- | ------------- | -------- | --------- |
+| _(vacío — se completa al probar el primero)_ |         |               |          |           |
 
 Cada fila enlaza, cuando corresponda, a la entrada de [`../BITACORA.md`](../BITACORA.md) donde se
 registró la prueba y a los números en [`../docs/evaluacion.md`](../docs/evaluacion.md).

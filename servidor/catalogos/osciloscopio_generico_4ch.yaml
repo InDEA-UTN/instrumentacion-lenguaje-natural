@@ -1,0 +1,49 @@
+# Catálogo de prueba. Instrumento genérico y simulado mientras D1 siga abierta
+# (ver instrumentos/README.md). Rangos ilustrativos, no verificados sobre hardware.
+
+instrumento:
+  id: osciloscopio_generico_4ch
+  fabricante: Genérico
+  modelo: Osciloscopio de 4 canales
+  estado: simulado
+
+acciones:
+  configurar_escala_vertical:
+    descripcion: Fija los volt por división de un canal vertical.
+    parametros:
+      canal:
+        tipo: entero
+        rango: [1, 4]
+      valor:
+        tipo: real
+        unidad: V
+        rango: [1.0e-3, 10.0]
+    plantilla_scpi: ":CHANnel{canal}:SCALe {valor}"
+    verificacion_scpi: ":CHANnel{canal}:SCALe?"
+    sensible: false
+    ejemplos:
+      - poné el canal uno en quinientos milivoltios por división
+      - subí la escala vertical del canal dos a un volt
+      - canal 1 a 50 milivolt
+
+  configurar_base_tiempo:
+    descripcion: Fija los segundos por división de la base de tiempo horizontal.
+    parametros:
+      valor:
+        tipo: real
+        unidad: s
+        rango: [1.0e-9, 50.0]
+    plantilla_scpi: ":TIMebase:SCALe {valor}"
+    verificacion_scpi: ":TIMebase:SCALe?"
+    sensible: false
+    ejemplos:
+      - poné la base de tiempo en un milisegundo
+      - base de tiempo a diez microsegundos por división
+
+  reiniciar_instrumento:
+    descripcion: Vuelve el instrumento a su configuración de fábrica. Descarta la configuración actual.
+    plantilla_scpi: "*RST"
+    sensible: true
+    ejemplos:
+      - reiniciá el osciloscopio
+      - volvé todo a fábrica

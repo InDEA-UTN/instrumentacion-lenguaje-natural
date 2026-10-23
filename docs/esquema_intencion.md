@@ -15,7 +15,7 @@ al revés.
 {
   "tipo": "accion",
   "accion": "configurar_escala_vertical",
-  "parametros": { "canal": 1, "valor": 0.5, "unidad": "V" },
+  "parametros": { "canal": 1, "valor": 0.5 },
   "confianza": 0.94,
   "enunciado": "poné el canal uno en quinientos milivoltios por división"
 }
@@ -25,9 +25,16 @@ al revés.
 |---|---|
 | `tipo` | `accion`, `consulta`, `aclaracion` o `fuera_de_alcance`. Ver la sección 3. |
 | `accion` | Identificador de una acción del catálogo. **Cerrado**: si no está en el catálogo, no existe. |
-| `parametros` | Los argumentos de esa acción, ya normalizados a unidades del Sistema Internacional. |
+| `parametros` | Los argumentos de esa acción, ya normalizados a unidades del Sistema Internacional y **sin unidad**: la unidad la fija la definición del parámetro en el catálogo, así el modelo no puede equivocarse en ella. |
 | `confianza` | Estimación del modelo sobre su propia interpretación. Por debajo de un umbral se pide confirmación en vez de ejecutar. |
 | `enunciado` | La transcripción original. Se conserva para la trazabilidad y para el conjunto de datos de la etapa 3. |
+
+### Contexto de la conversación
+
+El modelo recibe, además del enunciado, el **contexto**: el canal activo, la última intención y, si
+la hubo, la aclaración pendiente. Es lo que permite interpretar *"subilo un poco"* o completar un
+pedido después de repreguntar sin perder lo ya entendido. Su forma está en
+[`modelo_dominio.md`](modelo_dominio.md).
 
 ## 2. Definición de una acción
 

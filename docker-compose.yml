@@ -27,3 +27,19 @@ services:
       - /app/node_modules
     depends_on:
       - whisper
+
+  servidor:
+    build: ./servidor
+    container_name: servidor
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ASR_MOTOR=whisper_cpp
+      - ASR_URL=http://whisper:8080
+      - CATALOGO=/app/catalogos/osciloscopio_generico_4ch.yaml
+    env_file:
+      - path: ./servidor/.env  # GEMINI_API_KEY, INTERPRETE; lo de arriba tiene prioridad
+        required: false
+    depends_on:
+      - whisper

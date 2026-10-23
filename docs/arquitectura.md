@@ -1,6 +1,6 @@
 # Arquitectura
 
-> **Estado: propuesta inicial.** Las decisiones marcadas como *abiertas* son parte del trabajo de
+> **Estado: propuesta inicial.** Las decisiones marcadas como _abiertas_ son parte del trabajo de
 > la fase 0, no omisiones. Cuando una se cierra, se escribe acá con su fundamento y se registra en
 > la tabla de decisiones cerradas de [`../00_PLAN.md`](../00_PLAN.md).
 
@@ -20,13 +20,13 @@ flowchart TD
     E -.->|respuesta del instrumento| D
 ```
 
-| Etapa | Naturaleza | Responsabilidad |
-|---|---|---|
-| 1 · Captura | Determinística | Grabar el audio y entregarlo al servidor. |
-| 2 · Transcripción | **Probabilística** | Convertir el audio a texto. |
-| 3 · Interpretación | **Probabilística** | Convertir el texto a una acción del catálogo, con sus parámetros. |
-| 4 · Validación y traducción | Determinística | Verificar que la acción exista, que los parámetros estén en rango, y armar el comando. |
-| 5 · Ejecución | Determinística | Enviar el comando y leer la respuesta. |
+| Etapa                       | Naturaleza         | Responsabilidad                                                                        |
+| --------------------------- | ------------------ | -------------------------------------------------------------------------------------- |
+| 1 · Captura                 | Determinística     | Grabar el audio y entregarlo al servidor.                                              |
+| 2 · Transcripción           | **Probabilística** | Convertir el audio a texto.                                                            |
+| 3 · Interpretación          | **Probabilística** | Convertir el texto a una acción del catálogo, con sus parámetros.                      |
+| 4 · Validación y traducción | Determinística     | Verificar que la acción exista, que los parámetros estén en rango, y armar el comando. |
+| 5 · Ejecución               | Determinística     | Enviar el comando y leer la respuesta.                                                 |
 
 ## 2. El principio de diseño: dónde está la frontera
 
@@ -91,10 +91,10 @@ disponibles y se le exige responder dentro de un esquema.
 
 Tres mecanismos posibles, en orden de preferencia:
 
-1. **Llamada a herramientas** (*tool calling* / *function calling*) — cada acción del catálogo se
+1. **Llamada a herramientas** (_tool calling_ / _function calling_) — cada acción del catálogo se
    declara como una herramienta con sus parámetros tipados. Es el mecanismo para el que estos
    modelos están entrenados y el que da mejores resultados.
-2. **Salida forzada a un esquema** (*structured output*) — el modelo responde un objeto JSON que
+2. **Salida forzada a un esquema** (_structured output_) — el modelo responde un objeto JSON que
    cumple un esquema declarado.
 3. **Análisis sintáctico de la respuesta libre** — último recurso, frágil. No usarlo.
 
@@ -148,10 +148,10 @@ la fase 4, con el mismo protocolo y las mismas métricas, para que la comparaci�
 
 ## 5. Decisiones abiertas
 
-| # | Decisión | Fase | Estado |
-|---|---|---|---|
-| D1 | Instrumento objetivo de la etapa 1 | 0 | Abierta |
-| D2 | Motor de ASR: local o en la nube | 0 | Abierta |
-| D3 | Modelo de lenguaje y mecanismo de salida estructurada | 0 | Abierta |
-| D4 | Transporte entre aplicación y servidor | 0 | Abierta |
-| D5 | Versión inicial del esquema de intención | 0 | Abierta |
+| #   | Decisión                                              | Fase | Estado  |
+| --- | ----------------------------------------------------- | ---- | ------- |
+| D1  | Instrumento objetivo de la etapa 1                    | 0    | Abierta |
+| D2  | Motor de ASR: local o en la nube                      | 0    | Abierta |
+| D3  | Modelo de lenguaje y mecanismo de salida estructurada | 0    | Abierta |
+| D4  | Transporte entre aplicación y servidor                | 0    | Abierta |
+| D5  | Versión inicial del esquema de intención              | 0    | Abierta |

@@ -7,6 +7,7 @@ va el enlace y no la copia: de dos copias, una siempre queda desactualizada.
 |---|---|
 | [`arquitectura.md`](arquitectura.md) | Las etapas de la cascada, qué hace cada una, las alternativas evaluadas y las decisiones abiertas. |
 | [`esquema_intencion.md`](esquema_intencion.md) | El contrato entre el modelo de lenguaje y la capa de ejecución: qué forma tiene una intención y cómo se valida. |
+| [`modelo_dominio.md`](modelo_dominio.md) | Entidades del servidor, la interfaz común de los modelos (ASR, LLM) y cómo se intercambian por configuración. |
 | [`scpi.md`](scpi.md) | Qué es SCPI, cómo se descubre el conjunto de comandos de un instrumento, y el catálogo acotado de la etapa 1. |
 | [`estado_del_arte.md`](estado_del_arte.md) | Relevamiento de antecedentes: trabajos previos, modelos de reconocimiento del habla y bibliotecas de instrumentación. |
 | [`dataset.md`](dataset.md) | Plan de construcción del conjunto de datos y de ajuste fino del modelo abierto (etapa 3). |

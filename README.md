@@ -72,6 +72,7 @@ El plan completo, con objetivos específicos y criterios de aceptación de cada 
 | [`BITACORA.md`](BITACORA.md) | Registro cronológico del trabajo. **Es el registro formal de la PPS.** |
 | [`docs/arquitectura.md`](docs/arquitectura.md) | Las etapas de la cascada, las alternativas evaluadas y las decisiones abiertas. |
 | [`docs/esquema_intencion.md`](docs/esquema_intencion.md) | El contrato entre el modelo de lenguaje y el resto del sistema. |
+| [`docs/modelo_dominio.md`](docs/modelo_dominio.md) | Entidades del servidor e interfaz común para intercambiar modelos. |
 | [`docs/scpi.md`](docs/scpi.md) | Qué es SCPI, cómo se descubre el conjunto de comandos de un instrumento y el catálogo de la etapa 1. |
 | [`docs/estado_del_arte.md`](docs/estado_del_arte.md) | Relevamiento de antecedentes: trabajos previos, modelos de ASR y bibliotecas de instrumentación. |
 | [`docs/dataset.md`](docs/dataset.md) | Plan de construcción del conjunto de datos y de ajuste fino (etapa 3). |
