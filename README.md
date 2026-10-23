@@ -34,7 +34,7 @@ probabilístico y lo determinístico:
 
 ```mermaid
 flowchart LR
-    A["Aplicación Android<br/>captura de audio"] -->|audio| B["ASR<br/>voz a texto"]
+    A["Aplicación web (PWA)<br/>captura de audio"] -->|audio| B["ASR<br/>voz a texto"]
     B -->|texto| C["Modelo de lenguaje<br/>+ catálogo de acciones"]
     C -->|intención estructurada| D["Validador y traductor<br/>determinístico"]
     D -->|SCPI| E["PyVISA"]
@@ -76,9 +76,10 @@ El plan completo, con objetivos específicos y criterios de aceptación de cada 
 | [`docs/estado_del_arte.md`](docs/estado_del_arte.md) | Relevamiento de antecedentes: trabajos previos, modelos de ASR y bibliotecas de instrumentación. |
 | [`docs/dataset.md`](docs/dataset.md) | Plan de construcción del conjunto de datos y de ajuste fino (etapa 3). |
 | [`docs/evaluacion.md`](docs/evaluacion.md) | Métricas y protocolo experimental. |
-| [`app/`](app/) | Aplicación Android de captura de audio. |
+| [`app/`](app/) | Aplicación web (PWA) de captura de audio. |
 | [`servidor/`](servidor/) | Servicio que transcribe, interpreta, valida y envía los comandos. |
 | [`instrumentos/`](instrumentos/) | Una ficha por instrumento: interfaz física, comandos disponibles y límites. |
+| [`modelos/`](modelos/) | Binarios de modelos con los que se experimenta (ASR, y luego modelos de lenguaje locales); no versionados, con su registro de pruebas. |
 
 ## Cómo se trabaja acá
 
