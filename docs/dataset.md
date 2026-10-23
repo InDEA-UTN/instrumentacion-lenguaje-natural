@@ -29,7 +29,7 @@ Un par *(enunciado, intención)*, más el contexto necesario para desambiguar:
   "intencion": {
     "tipo": "accion",
     "accion": "configurar_escala_vertical",
-    "parametros": { "canal": 1, "valor": 0.5, "unidad": "V" }
+    "parametros": { "canal": 1, "valor": 0.5 }
   }
 }
 ```
