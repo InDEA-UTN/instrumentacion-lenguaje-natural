@@ -16,6 +16,29 @@ services:
        curl -L $$MODEL_URL -o /models/$$MODEL_NAME &&
        whisper-server -m /models/$$MODEL_NAME --host 0.0.0.0 --port 8080"
 
+  llm:
+    # Versión fija: la arquitectura de Qwen3.5 es reciente y un :server móvil puede cambiar el resultado.
+    image: ghcr.io/ggml-org/llama.cpp:server-b11870
+    container_name: llm-server
+    restart: unless-stopped
+    ports:
+      - "8081:8080"  # el 8080 del host lo usa whisper
+    volumes:
+      - ./modelos/llm:/models:ro  # modelos/llm/README.md: cómo bajar el archivo
+    command:
+      - -m
+      - /models/Qwen3.5-4B-Q4_K_M.gguf
+      - --host
+      - 0.0.0.0
+      - --port
+      - "8080"
+      - -c
+      - "8192"  # el prompt con el catálogo son unos pocos miles de tokens
+      - -np
+      - "1"
+      - --reasoning
+      - "off"  # Qwen3.5 razona por defecto; para clasificar contra un catálogo solo suma latencia
+
   front-web:
     build: ./app/front-web
     container_name: front-web
@@ -26,7 +49,7 @@ services:
       - ./app/front-web:/app
       - /app/node_modules
     depends_on:
-      - whisper
+      - servidor
 
   servidor:
     build: ./servidor
@@ -38,8 +61,11 @@ services:
       - ASR_MOTOR=whisper_cpp
       - ASR_URL=http://whisper:8080
       - CATALOGO=/app/catalogos/osciloscopio_generico_4ch.yaml
+      - INTERPRETE=llama_cpp
+      - LLM_URL=http://llm:8080
     env_file:
-      - path: ./servidor/.env  # GEMINI_API_KEY, INTERPRETE; lo de arriba tiene prioridad
+      - path: ./servidor/.env  # GEMINI_API_KEY, etc.; lo de arriba tiene prioridad
         required: false
     depends_on:
       - whisper
+      - llm

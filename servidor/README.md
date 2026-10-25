@@ -3,8 +3,9 @@
 Corazón del sistema: recibe el audio, lo transcribe, lo interpreta, **valida** el resultado y
 ejecuta el comando contra el instrumento.
 
-**Estado:** esqueleto funcionando de punta a punta con whisper.cpp, un intérprete de prueba (guion
-fijo) y un instrumento en memoria. El intérprete real espera a D3 y el instrumento real a D1
+**Estado:** funcionando de punta a punta con whisper.cpp, un intérprete local (Qwen3.5-4B sobre
+llama.cpp, prueba de concepto) y un instrumento en memoria. Gemini y un intérprete de prueba (guion
+fijo) siguen disponibles. La elección del intérprete es D3, y el instrumento real espera a D1
 ([`../docs/arquitectura.md`](../docs/arquitectura.md)). El modelo de dominio y la interfaz común de
 los modelos están en [`../docs/modelo_dominio.md`](../docs/modelo_dominio.md).
 
@@ -72,8 +73,10 @@ O todo junto desde la raíz: `docker compose up -d` (servidor en el puerto 8000)
 | `POST /confirmaciones/{id}` | `{"aceptar": true}` ejecuta una acción que quedó pendiente de confirmación. |
 
 Los modelos se eligen por variables de entorno (ver `src/servidor/config.py`): `ASR_MOTOR`
-(`whisper_cpp`, `fake`), `ASR_URL`, `INTERPRETE` (`fake`, `gemini`), `GEMINI_API_KEY`,
-`GEMINI_MODELO`, `CATALOGO`, `UMBRAL_CONFIANZA`. Para desarrollo local van en `servidor/.env`, que
+(`whisper_cpp`, `fake`), `ASR_URL`, `INTERPRETE` (`fake`, `gemini`, `llama_cpp`), `GEMINI_API_KEY`,
+`GEMINI_MODELO`, `LLM_URL`, `LLM_MODELO`, `LLM_TIMEOUT_S`, `CATALOGO`, `UMBRAL_CONFIANZA`. El
+docker-compose usa `llama_cpp`; el modelo local se baja a mano (ver
+[`../modelos/llm/README.md`](../modelos/llm/README.md)). Para desarrollo local van en `servidor/.env`, que
 no se versiona.
 
 ## Cómo agregar un modelo

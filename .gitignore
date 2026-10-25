@@ -37,4 +37,5 @@ Thumbs.db
 
 # Modelos y datos de prueba 
 modelos/whisper/*.bin
+modelos/llm/*.gguf
 audio_ejemplos

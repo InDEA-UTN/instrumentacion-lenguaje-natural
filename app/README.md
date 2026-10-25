@@ -2,6 +2,10 @@
 
 Version de prueba del front-end hecho para probar las funcionalidades de los modelos y endpoints
 
+**Estado:** el front de prueba ([`front-web/`](front-web/)) ya recorre la cadena completa contra el
+servidor: graba con presionar y sostener, y muestra transcripción, intención, comando y resultado,
+con confirmación y aclaración.
+
 ## Descripción de las responsabilidades
 
 1. **Grabar** mientras el usuario mantiene presionado un botón. Se elige presionar y sostener, y no
