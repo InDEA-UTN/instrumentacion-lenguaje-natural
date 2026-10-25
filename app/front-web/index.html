@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Prueba de transcripción — whisper.cpp</title>
+    <title>Prueba del sistema — instrumentación por voz</title>
     <style>
       body {
         font-family: system-ui, sans-serif;
@@ -38,14 +38,116 @@
         transform: scaleX(0);
         transition: transform 0.05s linear;
       }
-      .resultado {
+      button.secundario {
+        font-size: 0.9rem;
+        padding: 0.3rem 0.9rem;
+        background: #f4f4f4;
+      }
+      button.grabar {
+        font-size: 1.2rem;
+        padding: 1.5rem 2rem;
+        width: 100%;
+        margin-top: 1rem;
+        touch-action: none; /* sostener en el celular no hace scroll ni zoom */
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-touch-callout: none;
+      }
+      button.grabar.presionado {
+        background: #d00;
+        border-color: #d00;
+        color: #fff;
+      }
+      .nota {
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0.4rem 0;
+      }
+      .salud {
+        font-size: 0.85rem;
+        color: #444;
+      }
+      .salud .ok {
+        color: #1b7f3b;
+      }
+      .salud .mal,
+      .salud-mal {
+        color: #b00020;
+      }
+      .sesion {
         margin-top: 2rem;
-        text-align: left;
-        white-space: pre-wrap;
+        font-size: 0.85rem;
+        color: #666;
+      }
+      .aviso {
+        color: #8a5a00;
+        margin-top: 1rem;
       }
       .error {
         color: #b00020;
         margin-top: 1rem;
+      }
+      .tarjeta {
+        margin-top: 2rem;
+        padding: 1rem 1.2rem;
+        text-align: left;
+        border: 1px solid #ccc;
+        border-left-width: 6px;
+        border-radius: 8px;
+      }
+      .tarjeta-ejecutada,
+      .tarjeta-consultada {
+        border-left-color: #1b7f3b;
+      }
+      .tarjeta-aclaracion {
+        border-left-color: #1f5fbf;
+      }
+      .tarjeta-confirmacion_pendiente {
+        border-left-color: #d08a00;
+      }
+      .tarjeta-rechazada {
+        border-left-color: #b00020;
+      }
+      .tarjeta-cancelada {
+        border-left-color: #888;
+      }
+      .insignia {
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+      .mensaje {
+        font-size: 1.15rem;
+        margin: 0.5rem 0;
+      }
+      .acciones {
+        display: flex;
+        gap: 0.5rem;
+        margin: 0.75rem 0;
+      }
+      .tarjeta dl {
+        margin: 1rem 0 0;
+      }
+      .tarjeta dt {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: #666;
+        margin-top: 0.6rem;
+      }
+      .tarjeta dd {
+        margin: 0.1rem 0 0;
+        overflow-wrap: anywhere;
+      }
+      .tarjeta dd small {
+        display: block;
+        color: #666;
+      }
+      .tarjeta dd code {
+        display: block;
+      }
+      .pie {
+        font-size: 0.8rem;
+        color: #666;
+        margin: 1rem 0 0;
       }
       .spinner {
         display: inline-block;
