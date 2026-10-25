@@ -8,6 +8,7 @@ from .dominio.puertos import Interprete, MotorASR
 from .ejecucion import Ejecutor, InstrumentoFake
 from .interpretacion.fake import InterpreteFake
 from .interpretacion.gemini import Gemini
+from .interpretacion.llama_cpp import LlamaCpp
 from .pipeline import ProcesarPedido
 from .transcripcion.fake import ASRFake
 from .transcripcion.whisper_cpp import WhisperCpp
@@ -20,6 +21,7 @@ MOTORES_ASR: dict[str, Callable[[Configuracion], MotorASR]] = {
 INTERPRETES: dict[str, Callable[[Configuracion], Interprete]] = {
     "fake": lambda c: InterpreteFake(),
     "gemini": lambda c: Gemini(api_key=c.gemini_api_key, modelo=c.gemini_modelo),
+    "llama_cpp": lambda c: LlamaCpp(url=c.llm_url, modelo=c.llm_modelo, timeout_s=c.llm_timeout_s),
 }
 
 

@@ -7,12 +7,18 @@ from servidor.dominio.puertos import Interprete
 from servidor.config import Configuracion
 from servidor.interpretacion.fake import InterpreteFake
 from servidor.interpretacion.gemini import Gemini
+from servidor.interpretacion.llama_cpp import LlamaCpp
 
 IMPLEMENTACIONES = [
     pytest.param(lambda: InterpreteFake(), id="fake"),
     pytest.param(
         lambda: Gemini(api_key=(c := Configuracion()).gemini_api_key, modelo=c.gemini_modelo),
         id="gemini",
+        marks=pytest.mark.integracion,
+    ),
+    pytest.param(
+        lambda: LlamaCpp(url=(c := Configuracion()).llm_url, modelo=c.llm_modelo, timeout_s=c.llm_timeout_s),
+        id="llama_cpp",
         marks=pytest.mark.integracion,
     ),
 ]

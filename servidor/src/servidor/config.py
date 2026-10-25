@@ -18,6 +18,9 @@ class Configuracion(BaseSettings):
     interprete: str = "fake"  # ver registro.INTERPRETES
     gemini_api_key: str | None = None
     gemini_modelo: str = "gemini-3.8-flash"
+    llm_url: str = "http://localhost:8081"  # llama-server (servicio `llm` del docker-compose)
+    llm_modelo: str = "qwen3.5-4b-q4_k_m"  # solo identifica el modelo; el archivo lo elige el servicio
+    llm_timeout_s: float = 60.0  # el primer pedido procesa el prompt entero y en CPU tarda
 
     catalogo: Path = _RAIZ_SERVIDOR / "catalogos" / "osciloscopio_generico_4ch.yaml"
     umbral_confianza: float = 0.7
