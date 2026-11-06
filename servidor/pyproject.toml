@@ -23,6 +23,10 @@ build-backend = "setuptools.build_meta"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+# Los catálogos viajan con el paquete: la ruta por defecto funciona instalado o en modo editable.
+servidor = ["catalogos/*.yaml"]
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

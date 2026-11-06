@@ -3,6 +3,8 @@ from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 _RAIZ_SERVIDOR = Path(__file__).resolve().parents[2]
+# Junto al código y no bajo _RAIZ_SERVIDOR, que fuera del modo editable no apunta a servidor/.
+CATALOGOS = Path(__file__).resolve().parent / "catalogos"
 
 
 class Configuracion(BaseSettings):
@@ -22,5 +24,5 @@ class Configuracion(BaseSettings):
     llm_modelo: str = "qwen3.5-4b-q4_k_m"  # solo identifica el modelo; el archivo lo elige el servicio
     llm_timeout_s: float = 60.0  # el primer pedido procesa el prompt entero y en CPU tarda
 
-    catalogo: Path = _RAIZ_SERVIDOR / "catalogos" / "osciloscopio_generico_4ch.yaml"
+    catalogo: Path = CATALOGOS / "osciloscopio_generico_4ch.yaml"
     umbral_confianza: float = 0.7

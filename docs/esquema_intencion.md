@@ -74,6 +74,22 @@ Sobre tres campos que no son obvios:
 - **`ejemplos`** — no son decorativos. Alimentan la instrucción del modelo en la etapa 1 y son la
   semilla del conjunto de datos de la etapa 3 ([`dataset.md`](dataset.md)).
 
+Dos reglas que el cargador hace cumplir y que rechazan el catálogo entero si no se respetan:
+
+- Una plantilla SCPI solo puede usar parámetros declarados en su acción.
+- **Un mismo nombre de parámetro tiene un solo tipo en todo el catálogo.** Dos acciones pueden
+  compartir `valor` con rangos y unidades distintos, pero no puede ser `real` en una y `entero` en
+  la otra. El esquema de respuesta que recibe el modelo declara cada parámetro una sola vez, por
+  nombre.
+
+En una `consulta`, el validador solo usa los parámetros que necesita la plantilla de
+`verificacion_scpi`, por ejemplo el canal. Si el modelo agrega otro parámetro de la misma acción,
+lo descarta, porque una consulta no escribe nada. Un parámetro que la acción no declara se sigue
+rechazando.
+
+Los catálogos están en `servidor/src/servidor/catalogos/` y se instalan con el paquete. Para
+usar otro, se lo indica con la variable de entorno `CATALOGO`.
+
 ## 3. Los cuatro tipos de intención
 
 Un sistema que solo sabe ejecutar es un sistema que ejecuta cualquier cosa. Los cuatro tipos

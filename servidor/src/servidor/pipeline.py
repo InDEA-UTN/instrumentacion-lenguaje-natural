@@ -92,9 +92,20 @@ class ProcesarPedido:
 
 
 def actualizar_contexto(contexto: Contexto, interaccion: Interaccion) -> Contexto:
+    """El contexto guarda lo que se entendió y se hizo, no lo que se descartó.
+
+    - Rechazada: no cambia nada. Un canal fuera de rango no pasa a ser el canal activo, y una
+      aclaración pendiente sigue pendiente para que el usuario pueda volver a responderla.
+    - Pendiente de confirmación: todavía no pasó nada; el contexto se actualiza al confirmar.
+    - Cancelada: el pedido se cerró sin efecto; solo se descarta la aclaración que lo originó.
+    """
     intencion = interaccion.intencion
-    if intencion is None:
+    if intencion is None or interaccion.estado in (
+        EstadoInteraccion.RECHAZADA, EstadoInteraccion.CONFIRMACION_PENDIENTE
+    ):
         return contexto
+    if interaccion.estado == EstadoInteraccion.CANCELADA:
+        return contexto.model_copy(update={"aclaracion_pendiente": None})
     canal = intencion.parametros.get("canal", contexto.canal_activo)
     return contexto.model_copy(update={
         "ultima_intencion": intencion,

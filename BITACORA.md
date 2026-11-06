@@ -33,6 +33,30 @@ pasos. Es la memoria del proyecto y el insumo del informe final.
 
 ---
 
+## 2026-11-06 — Correcciones del servidor tras la revisión
+- **Fase:** 1 · **Estado:** 🟨 En curso (falta probar el prompt con Qwen)
+- **Objetivo:** resolver los pendientes de código de la revisión de hoy (entrada siguiente).
+- **Actividad:**
+  - **Catálogo:** el cargador rechaza un catálogo en el que un mismo nombre de parámetro tenga tipos
+    distintos según la acción.
+  - **Contexto de sesión:**
+    - Un pedido rechazado o pendiente de confirmación ya no cambia el contexto.
+    - Al confirmar, se actualiza el contexto de la sesión que hizo el pedido.
+    - Al cancelar, se descarta la aclaración pendiente.
+  - **Consultas:** se descartan los parámetros de la acción que la consulta no usa, en lugar de
+    rechazar el pedido.
+  - **Ruta del catálogo:** se movió a `servidor/src/servidor/catalogos/` y viaja con el paquete. La
+    ruta por defecto funciona sin definir `CATALOGO`, también en la imagen de Docker.
+  - **Prompt:** un pedido que trae la acción y todos sus parámetros se interpreta sin usar el
+    contexto. Se agregó un test de contrato que repite el mismo pedido en una sesión.
+  - **Tests:** se sumaron tests de la API (salud, confirmación, sesiones), que no había.
+- **Resultado:**
+  - Pasan 36 tests sin servicios externos (eran 24).
+  - El cambio de prompt **no se probó contra Qwen**: Docker no estaba levantado. Queda pendiente
+    correr `pytest -m integracion` con el servicio `llm`.
+- **Documentado en:** [`docs/esquema_intencion.md`](docs/esquema_intencion.md), sección 2.
+- **Próximo paso:** correr los tests de integración con Qwen y Gemini.
+
 ## 2026-11-06 — Revisión del repositorio y puesta al día de la documentación
 - **Fase:** 0–1 · **Estado:** 🟨 En curso
 - **Objetivo:** revisar código y documentación contra el estado real del proyecto antes de seguir

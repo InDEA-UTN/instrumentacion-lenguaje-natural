@@ -18,7 +18,23 @@ def cargar_catalogo(ruta: str | Path) -> CatalogoInstrumento:
         }
     except (KeyError, TypeError, ValidationError) as e:
         raise CatalogoInvalido(f"{ruta}: {e}") from e
+    _verificar_tipos_homonimos(acciones)
     return CatalogoInstrumento(instrumento=instrumento, acciones=acciones)
+
+
+def _verificar_tipos_homonimos(acciones: dict[str, Accion]) -> None:
+    """El esquema de respuesta del intérprete declara cada parámetro una sola vez, por nombre
+    (interpretacion/comun.py). Si dos acciones usan el mismo nombre con tipos distintos, la gramática
+    le exigiría a una de ellas el tipo de la otra: se rechaza el catálogo antes de que pase."""
+    tipos: dict[str, tuple[str, str]] = {}  # parámetro -> (tipo, acción donde se declaró primero)
+    for accion in acciones.values():
+        for p in accion.parametros:
+            previo = tipos.setdefault(p.nombre, (p.tipo, accion.id))
+            if previo[0] != p.tipo:
+                raise CatalogoInvalido(
+                    f"El parámetro '{p.nombre}' es {previo[0]} en '{previo[1]}' y {p.tipo} en "
+                    f"'{accion.id}'. Los parámetros con el mismo nombre tienen que tener el mismo tipo."
+                )
 
 
 def _accion(id_accion: str, decl: dict) -> Accion:

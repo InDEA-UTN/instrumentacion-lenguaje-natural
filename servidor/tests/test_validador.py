@@ -42,3 +42,20 @@ def test_rechaza(catalogo, intencion, motivo):
 def test_marca_sensible(catalogo):
     c = validar(_accion("reiniciar_instrumento"), catalogo)
     assert c.sensible and c.escritura == "*RST"
+
+
+def test_consulta_descarta_parametros_que_no_usa(catalogo):
+    # "¿En cuánto está la base de tiempo?" con un `valor` agregado por el modelo: se lee igual.
+    i = Intencion(tipo=TipoIntencion.CONSULTA, accion="configurar_base_tiempo",
+                  parametros={"valor": 0.001}, enunciado="")
+    c = validar(i, catalogo)
+    assert isinstance(c, ComandoSCPI)
+    assert c.escritura is None and c.verificacion == ":TIMebase:SCALe?"
+    assert c.parametros == {}
+
+
+def test_consulta_rechaza_parametros_ajenos_a_la_accion(catalogo):
+    i = Intencion(tipo=TipoIntencion.CONSULTA, accion="configurar_escala_vertical",
+                  parametros={"canal": 1, "offset": 0}, enunciado="")
+    r = validar(i, catalogo)
+    assert isinstance(r, Rechazo) and "no admite" in r.motivo
