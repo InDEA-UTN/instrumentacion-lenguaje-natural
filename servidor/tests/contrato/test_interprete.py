@@ -67,3 +67,14 @@ async def test_intencion_bien_formada(interprete, catalogo):
     assert 0.0 <= i.confianza <= 1.0
     if i.accion is not None:
         assert catalogo.accion(i.accion) is not None
+
+
+async def test_pedido_explicito_repetido_no_depende_del_contexto(interprete, catalogo):
+    # Bitácora 2026-10-25: con la misma intención en el contexto, Qwen pedía una aclaración innecesaria.
+    texto = "poné el canal uno en quinientos milivoltios por división"
+    primera = await interprete.interpretar(_t(texto), catalogo, Contexto())
+    contexto = Contexto(canal_activo=1, ultima_intencion=primera)
+    i = await interprete.interpretar(_t(texto), catalogo, contexto)
+    assert i.tipo == TipoIntencion.ACCION
+    assert i.accion == "configurar_escala_vertical"
+    assert i.parametros == {"canal": 1, "valor": pytest.approx(0.5)}

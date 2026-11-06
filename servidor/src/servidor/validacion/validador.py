@@ -31,17 +31,23 @@ def validar(intencion: Intencion, catalogo: CatalogoInstrumento) -> ComandoSCPI 
     if consulta and not accion.verificacion_scpi:
         return Rechazo(motivo=f"La acción '{accion.id}' no tiene una consulta asociada.")
 
+    parametros = dict(intencion.parametros)
+    admitidos = {p.nombre for p in accion.parametros}
+    if desconocidos := set(parametros) - admitidos:
+        return Rechazo(motivo=f"Parámetros que '{accion.id}' no admite: {', '.join(sorted(desconocidos))}.")
+
     if consulta:
-        admitidos = requeridos = campos_de_plantilla(accion.verificacion_scpi)
+        # Una consulta solo usa lo que identifica qué leer (ej. el canal). Si el modelo agregó un
+        # parámetro de la acción que no hace falta ("¿en cuánto está la base de tiempo?" con un
+        # `valor`), se descarta: no se escribe nada, así que no hay riesgo en ignorarlo.
+        requeridos = campos_de_plantilla(accion.verificacion_scpi)
+        parametros = {k: v for k, v in parametros.items() if k in requeridos}
     else:
-        admitidos = {p.nombre for p in accion.parametros}
         requeridos = {p.nombre for p in accion.parametros if p.obligatorio}
         requeridos |= campos_de_plantilla(accion.plantilla_scpi)
         requeridos |= campos_de_plantilla(accion.verificacion_scpi or "")
 
-    recibidos = set(intencion.parametros)
-    if desconocidos := recibidos - admitidos:
-        return Rechazo(motivo=f"Parámetros que '{accion.id}' no admite: {', '.join(sorted(desconocidos))}.")
+    recibidos = set(parametros)
 
     # 2. Están todos los obligatorios.
     if faltantes := requeridos - recibidos:
@@ -49,7 +55,7 @@ def validar(intencion: Intencion, catalogo: CatalogoInstrumento) -> ComandoSCPI 
 
     # 3 y 4. Tipo correcto y dentro del rango de este instrumento.
     valores: dict[str, int | float] = {}
-    for nombre, crudo in intencion.parametros.items():
+    for nombre, crudo in parametros.items():
         definicion = accion.parametro(nombre)
         valor = _convertir(definicion, crudo)
         if valor is None:

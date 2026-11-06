@@ -79,3 +79,28 @@ def test_esquema_derivado_del_catalogo(catalogo):
     escala = herramientas["configurar_escala_vertical"]["parametros"]
     assert escala["required"] == ["canal", "valor"]
     assert escala["properties"]["canal"] == {"type": "integer", "minimum": 1, "maximum": 4}
+
+
+async def test_rechazo_no_cambia_el_contexto(catalogo, instrumento):
+    guion = {"canal siete a un volt": {
+        "tipo": "accion", "accion": "configurar_escala_vertical", "parametros": {"canal": 7, "valor": 1.0},
+    }}
+    p = _pipeline(catalogo, instrumento, "canal siete a un volt", interprete=InterpreteFake(guion))
+    previo = actualizar_contexto(Contexto(), await _pipeline(catalogo, instrumento, "subí la escala").procesar(AUDIO, Contexto()))
+    i = await p.procesar(AUDIO, previo)
+    assert i.estado == EstadoInteraccion.RECHAZADA
+    # Ni el canal 7 pasa a ser el activo, ni se pierde la aclaración que seguía pendiente.
+    assert actualizar_contexto(previo, i) == previo
+
+
+async def test_pendiente_no_cambia_el_contexto_y_cancelar_cierra_la_aclaracion(catalogo, instrumento):
+    previo = Contexto(canal_activo=2, aclaracion_pendiente=None)
+    p = _pipeline(catalogo, instrumento, "reiniciá el osciloscopio")
+    pendiente = await p.procesar(AUDIO, previo)
+    assert actualizar_contexto(previo, pendiente) == previo
+
+    con_aclaracion = previo.model_copy(update={"aclaracion_pendiente": pendiente.intencion})
+    cancelada = await p.confirmar(pendiente.id, aceptar=False)
+    despues = actualizar_contexto(con_aclaracion, cancelada)
+    assert despues.aclaracion_pendiente is None
+    assert despues.ultima_intencion == previo.ultima_intencion

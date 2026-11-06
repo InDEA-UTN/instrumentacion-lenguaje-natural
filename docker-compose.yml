@@ -60,7 +60,6 @@ services:
     environment:
       - ASR_MOTOR=whisper_cpp
       - ASR_URL=http://whisper:8080
-      - CATALOGO=/app/catalogos/osciloscopio_generico_4ch.yaml
       - INTERPRETE=llama_cpp
       - LLM_URL=http://llm:8080
     env_file:

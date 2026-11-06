@@ -7,12 +7,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from ..dominio.errores import InteraccionInexistente, ModeloNoDisponible, RespuestaInvalida
-from ..dominio.modelos import Contexto, Grabacion, Interaccion
+from ..dominio.modelos import Contexto, EstadoInteraccion, Grabacion, Interaccion
 from ..pipeline import actualizar_contexto
 from ..registro import construir_pipeline
 
 # Contexto por sesión, en memoria. Alcanza para un prototipo con un solo servidor.
 _contextos: dict[str, Contexto] = {}
+# A qué sesión pertenece cada confirmación pendiente, para actualizar su contexto al resolverla.
+_sesion_de_pendiente: dict[str, str] = {}
 
 
 @asynccontextmanager
@@ -50,6 +52,8 @@ async def crear_pedido(audio: UploadFile, sesion: str = Form("default")) -> Inte
     except RespuestaInvalida as e:
         raise HTTPException(502, str(e)) from e
     _contextos[sesion] = actualizar_contexto(contexto, interaccion)
+    if interaccion.estado == EstadoInteraccion.CONFIRMACION_PENDIENTE:
+        _sesion_de_pendiente[interaccion.id] = sesion
     return interaccion
 
 
@@ -60,6 +64,9 @@ class Confirmacion(BaseModel):
 @app.post("/confirmaciones/{interaccion_id}", response_model=Interaccion)
 async def confirmar(interaccion_id: str, confirmacion: Confirmacion) -> Interaccion:
     try:
-        return await app.state.pipeline.confirmar(interaccion_id, confirmacion.aceptar)
+        interaccion = await app.state.pipeline.confirmar(interaccion_id, confirmacion.aceptar)
     except InteraccionInexistente as e:
         raise HTTPException(404, f"No hay confirmación pendiente con id {interaccion_id}") from e
+    if (sesion := _sesion_de_pendiente.pop(interaccion_id, None)) is not None:
+        _contextos[sesion] = actualizar_contexto(_contextos.get(sesion, Contexto()), interaccion)
+    return interaccion
