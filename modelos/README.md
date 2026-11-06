@@ -1,8 +1,9 @@
 # Modelos
 
-Directorio para los archivos de los modelos con los que se experimenta —motores de ASR, y más
-adelante modelos de lenguaje locales de la fase 3—. Es insumo de la decisión **D2**
-([`../docs/estado_del_arte.md`](../docs/estado_del_arte.md)) y de la fase 3
+Directorio para los archivos de los modelos con los que se experimenta: motores de ASR y modelos de
+lenguaje locales. Es insumo de las decisiones **D2** y **D3**
+([`../docs/estado_del_arte.md`](../docs/estado_del_arte.md),
+[`../docs/arquitectura.md`](../docs/arquitectura.md)) y de la fase 3
 ([`../docs/dataset.md`](../docs/dataset.md)).
 
 **Los binarios no se versionan** (ver `../.gitignore`): pesan demasiado para git y se pueden volver

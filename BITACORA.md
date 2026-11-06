@@ -33,6 +33,33 @@ pasos. Es la memoria del proyecto y el insumo del informe final.
 
 ---
 
+## 2026-11-06 — Revisión del repositorio y puesta al día de la documentación
+- **Fase:** 0–1 · **Estado:** 🟨 En curso
+- **Objetivo:** revisar código y documentación contra el estado real del proyecto antes de seguir
+  ampliando el catálogo.
+- **Actividad:**
+  - Se actualizó el estado en [`README.md`](README.md): ya no decía la verdad ("no hay
+    implementación todavía").
+  - Se agregaron a esta bitácora, a posteriori, las entradas del 2026-08-30, el 2026-10-08 y el
+    2026-10-23, que faltaban. Se reconstruyeron desde el historial de git y lo dicen.
+  - Se revisó el servidor. Pasan los 24 tests que no necesitan servicios externos.
+- **Resultado:** la revisión del código encontró estos pendientes:
+  - `esquema_respuesta` junta los parámetros de todas las acciones por nombre. Si dos acciones usan
+    el mismo nombre con tipos distintos, la gramática le exige al modelo el tipo equivocado. Hoy no
+    pasa, pero va a pasar al ampliar el catálogo.
+  - El contexto de sesión guarda canal e intención aunque el validador haya rechazado el pedido, y
+    una confirmación no actualiza el contexto.
+  - Una consulta con un parámetro de más (por ejemplo `valor` al consultar la base de tiempo) se
+    rechaza en lugar de ignorar ese parámetro.
+  - La ruta por defecto del catálogo solo sirve en modo editable (ya anotado el 2026-10-25).
+  - Antes de conectar un instrumento real:
+    - autenticación y CORS restringido;
+    - vencimiento de las confirmaciones pendientes;
+    - acceso serializado a la conexión VISA.
+- **Documentado en:** esta entrada.
+- **Próximo paso:** corregir los pendientes del servidor, cada uno con su test, y seguir con el
+  prompt para pedidos explícitos con contexto.
+
 ## 2026-10-25 — Front de prueba integrado con el servidor
 - **Fase:** 1 · **Estado:** ✅ Hecho
 - **Objetivo:** recorrer la cadena completa desde el navegador, no solo con `curl`, mostrando lo que
@@ -100,6 +127,70 @@ pasos. Es la memoria del proyecto y el insumo del informe final.
   - Correr la misma batería contra Gemini y Qwen3-4B-Instruct-2507 para tener la primera
     comparación de D3.
   - Evaluar la GPU (runtime de NVIDIA en Docker).
+
+## 2026-10-23 — Servidor: cascada de punta a punta con modelo de dominio y catálogo
+> Entrada registrada a posteriori (2026-11-06) a partir del historial de git (commit `9dec8a4`).
+
+- **Fase:** 1 (esqueleto), con las decisiones de fase 0 todavía abiertas · **Estado:** ✅ Hecho
+- **Objetivo:** tener la cascada completa (audio → texto → intención → validación → ejecución)
+  funcionando sin depender de que D1 y D3 estén cerradas.
+- **Actividad:**
+  - Esqueleto del servidor con puertos intercambiables para el ASR y el intérprete:
+    - whisper.cpp y un ASR de prueba;
+    - Gemini y un intérprete de prueba con guion fijo.
+  - Catálogo YAML de un osciloscopio genérico de 4 canales con tres acciones: escala vertical, base
+    de tiempo y reinicio (sensible).
+  - Validador determinístico, ejecución sobre un instrumento en memoria y API FastAPI (`/salud`,
+    `/pedidos`, `/confirmaciones`).
+  - Tests de contrato para los modelos y tests de validación y de pipeline.
+  - Se escribió [`docs/modelo_dominio.md`](docs/modelo_dominio.md). Se ajustó el esquema de
+    intención:
+    - los parámetros van sin unidad, porque la fija el catálogo;
+    - se agregó el contexto de la conversación.
+- **Resultado:** cadena completa funcionando contra el instrumento simulado. Los rangos del
+  catálogo son ilustrativos: no se verificaron sobre hardware.
+- **Documentado en:** [`servidor/README.md`](servidor/README.md),
+  [`docs/modelo_dominio.md`](docs/modelo_dominio.md),
+  [`docs/esquema_intencion.md`](docs/esquema_intencion.md).
+- **Próximo paso:** probar un intérprete local (ver la entrada del 2026-10-25) e integrar el front
+  con el servidor.
+
+## 2026-10-08 — La aplicación de captura pasa a ser una aplicación web (PWA)
+> Entrada registrada a posteriori (2026-11-06) a partir del historial de git (commit `5075d3a`).
+
+- **Fase:** 0 · **Estado:** ✅ Hecho
+- **Objetivo:** definir la plataforma de la aplicación de captura.
+- **Actividad:**
+  - Se reemplazó la aplicación Android prevista por una aplicación web progresiva (PWA).
+  - Se registró como decisión cerrada en [`00_PLAN.md`](00_PLAN.md).
+  - Se actualizaron el diagrama y la sección 3.1 de [`docs/arquitectura.md`](docs/arquitectura.md).
+- **Resultado:** decisión cerrada. Ventajas:
+  - un solo código corre en cualquier dispositivo con navegador;
+  - se instala sin tienda de aplicaciones;
+  - comparte la base del front web de prueba.
+- **Documentado en:** [`00_PLAN.md`](00_PLAN.md), [`docs/arquitectura.md`](docs/arquitectura.md).
+- **Próximo paso:** servidor de la cascada.
+
+## 2026-08-30 — Servicio de ASR con whisper.cpp y front web mínimo de prueba
+> Entrada registrada a posteriori (2026-11-06) a partir del historial de git (commits `8ace772` y
+> `8805a54`).
+
+- **Fase:** 0 (insumo de D2) · **Estado:** ✅ Hecho
+- **Objetivo:** tener un motor de ASR local levantado y una forma rápida de probarlo con la voz.
+- **Actividad:**
+  - Se armó el `docker-compose.yml` de la raíz con el servicio `whisper`: `whisper-server` de
+    whisper.cpp con el modelo `ggml-small`, que se descarga si no está.
+  - Se armó un front web mínimo (React + Vite) que:
+    - graba del micrófono;
+    - codifica a WAV;
+    - envía a `/inference`;
+    - muestra la transcripción, con un medidor de nivel mientras graba.
+  - Se fijó el idioma de transcripción en español.
+- **Resultado:** transcripción desde el navegador funcionando. En esta etapa no se registraron
+  mediciones de tasa de error ni de latencia.
+- **Documentado en:** [`modelos/whisper/README.md`](modelos/whisper/README.md),
+  [`app/front-web/README.md`](app/front-web/README.md).
+- **Próximo paso:** definir la plataforma de la aplicación de captura y empezar el servidor.
 
 ## 2026-08-27 — Creación del repositorio y estructura inicial
 - **Fase:** 0 · **Estado:** ✅ Hecho
