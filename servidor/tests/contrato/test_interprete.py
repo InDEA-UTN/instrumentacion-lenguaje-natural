@@ -52,6 +52,21 @@ async def test_ejemplo_del_catalogo(interprete, catalogo):
     assert i.parametros == {"canal": 1, "valor": pytest.approx(0.5)}
 
 
+async def test_opcion_del_catalogo(interprete, catalogo):
+    i = await interprete.interpretar(_t("pasá el canal uno a acoplamiento alterna"), catalogo, Contexto())
+    assert i.tipo == TipoIntencion.ACCION
+    assert i.accion == "configurar_acoplamiento"
+    assert i.parametros == {"canal": 1, "acoplamiento": "AC"}
+
+
+async def test_medicion(interprete, catalogo):
+    # Preguntar una medición puede leerse como acción o como consulta: las dos la ejecutan igual.
+    i = await interprete.interpretar(_t("cuál es la frecuencia del canal uno"), catalogo, Contexto())
+    assert i.tipo in (TipoIntencion.ACCION, TipoIntencion.CONSULTA)
+    assert i.accion == "medir"
+    assert i.parametros == {"canal": 1, "magnitud": "FREQuency"}
+
+
 async def test_fuera_de_catalogo_no_se_aproxima(interprete, catalogo):
     i = await interprete.interpretar(_t("prendé la cafetera"), catalogo, Contexto())
     assert i.tipo == TipoIntencion.FUERA_DE_ALCANCE

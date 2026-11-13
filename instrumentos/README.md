@@ -3,7 +3,8 @@
 Una ficha por instrumento soportado. La ficha es la fuente de verdad de qué se puede pedirle a ese
 equipo y con qué límites: la capa de validación no consulta ningún otro lado.
 
-**Estado:** vacío. La decisión D1 —qué instrumento se usa en la etapa 1— está abierta.
+**Estado:** la decisión D1 está cerrada. El instrumento de la etapa 1 es el
+[**Tektronix TBS1072B**](tektronix_tbs1072b.md), por ahora solo simulado.
 
 ## Advertencia sobre el instrumental disponible
 

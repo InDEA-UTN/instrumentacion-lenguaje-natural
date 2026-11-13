@@ -1,0 +1,176 @@
+# Catálogo del Tektronix TBS1072B (2 canales, 70 MHz). Ficha: instrumentos/tektronix_tbs1072b.md.
+#
+# Comandos y argumentos tomados del manual de programación 077-0444-03 (Rev B). Los rangos salen
+# del manual y de la configuración de fábrica; NO están verificados sobre el equipo. Hasta
+# verificarlos, `estado` queda en simulado.
+#
+# Los nombres de parámetro tienen un solo tipo en todo el catálogo (docs/esquema_intencion.md).
+
+instrumento:
+  id: tektronix_tbs1072b
+  fabricante: Tektronix
+  modelo: TBS1072B
+  estado: simulado
+
+acciones:
+  configurar_escala_vertical:
+    descripcion: >-
+      Fija los volt por división de un canal, tal como se ven en pantalla (ya incluye la atenuación
+      de la sonda).
+    parametros:
+      canal:
+        tipo: entero
+        rango: [1, 2]
+      valor:
+        tipo: real
+        unidad: V
+        # 2 mV a 5 V/div con sonda 1X; con 10X (la de fábrica) es de 20 mV a 50 V/div.
+        rango: [2.0e-3, 50.0]
+    plantilla_scpi: "CH{canal}:SCAle {valor}"
+    verificacion_scpi: "CH{canal}:SCAle?"
+    ejemplos:
+      - poné el canal uno en quinientos milivoltios por división
+      - subí la escala vertical del canal dos a un volt
+      - canal 1 a 50 milivolt
+
+  configurar_acoplamiento:
+    descripcion: >-
+      Fija el acoplamiento de entrada de un canal. AC = alterna (bloquea la continua), DC = continua
+      (pasa todo), GND = tierra (muestra la línea de cero).
+    parametros:
+      canal:
+        tipo: entero
+        rango: [1, 2]
+      acoplamiento:
+        tipo: opcion
+        opciones: [AC, DC, GND]
+    plantilla_scpi: "CH{canal}:COUPling {acoplamiento}"
+    verificacion_scpi: "CH{canal}:COUPling?"
+    ejemplos:
+      - pasá el canal uno a acoplamiento alterna
+      - canal dos en continua
+      - poné a tierra el canal uno
+
+  configurar_atenuacion_sonda:
+    descripcion: >-
+      Indica al osciloscopio la atenuación de la punta conectada a un canal, para que la escala y las
+      mediciones salgan en volt reales. El número es el factor: "1" = uno a uno o 1X (sin atenuar),
+      "10" = por diez o 10X, "100" = por cien o 100X.
+    parametros:
+      canal:
+        tipo: entero
+        rango: [1, 2]
+      atenuacion:
+        tipo: opcion
+        opciones: ["1", "10", "20", "50", "100", "500", "1000"]
+    plantilla_scpi: "CH{canal}:PRObe {atenuacion}"
+    verificacion_scpi: "CH{canal}:PRObe?"
+    ejemplos:
+      - la punta del canal uno es por diez
+      - configurá la sonda del canal dos en uno a uno
+
+  mostrar_canal:
+    descripcion: Muestra (ON) u oculta (OFF) la traza de un canal en pantalla.
+    parametros:
+      canal:
+        tipo: entero
+        rango: [1, 2]
+      visible:
+        tipo: opcion
+        opciones: ["ON", "OFF"]  # entre comillas: sin ellas YAML las lee como booleanos
+    plantilla_scpi: "SELect:CH{canal} {visible}"
+    verificacion_scpi: "SELect:CH{canal}?"
+    ejemplos:
+      - prendé el canal dos
+      - apagá el canal uno
+      - mostrame el canal dos
+
+  configurar_base_tiempo:
+    descripcion: >-
+      Fija los segundos por división de la base de tiempo horizontal. El equipo redondea al valor
+      más cercano de la secuencia 1-2,5-5.
+    parametros:
+      valor:
+        tipo: real
+        unidad: s
+        rango: [5.0e-9, 50.0]
+    plantilla_scpi: "HORizontal:MAIn:SCAle {valor}"
+    verificacion_scpi: "HORizontal:MAIn:SCAle?"
+    ejemplos:
+      - poné la base de tiempo en un milisegundo
+      - base de tiempo a diez microsegundos por división
+
+  configurar_nivel_disparo:
+    descripcion: Fija el nivel de tensión del disparo (trigger) por flanco.
+    parametros:
+      valor:
+        tipo: real
+        unidad: V
+        # El equipo admite unas ±8 divisiones de la escala del canal fuente y recorta lo demás.
+        rango: [-50.0, 50.0]
+    plantilla_scpi: "TRIGger:MAIn:LEVel {valor}"
+    verificacion_scpi: "TRIGger:MAIn:LEVel?"
+    ejemplos:
+      - poné el nivel de disparo en un volt
+      - trigger a menos doscientos milivoltios
+
+  configurar_fuente_disparo:
+    descripcion: >-
+      Elige la señal que dispara el barrido por flanco: CH1 o CH2 (canales), EXT (entrada externa),
+      EXT5 (entrada externa atenuada por 5) o LINE (la red eléctrica).
+    parametros:
+      fuente:
+        tipo: opcion
+        opciones: [CH1, CH2, EXT, EXT5, LINE]
+    plantilla_scpi: "TRIGger:MAIn:EDGE:SOUrce {fuente}"
+    verificacion_scpi: "TRIGger:MAIn:EDGE:SOUrce?"
+    ejemplos:
+      - dispará con el canal dos
+      - trigger por la entrada externa
+      - sincronizá con la línea
+
+  controlar_adquisicion:
+    descripcion: Arranca (RUN) o congela (STOP) la adquisición. Equivale al botón RUN/STOP.
+    parametros:
+      adquisicion:
+        tipo: opcion
+        opciones: [RUN, STOP]
+    plantilla_scpi: "ACQuire:STATE {adquisicion}"
+    verificacion_scpi: "ACQuire:STATE?"
+    ejemplos:
+      - congelá la pantalla
+      - pará la adquisición
+      - seguí adquiriendo
+
+  medir:
+    descripcion: >-
+      Mide una magnitud de la señal de un canal y devuelve el valor. FREQuency = frecuencia,
+      PERIod = período, PK2pk = pico a pico, AMplitude = amplitud, MEAN = valor medio, RMS = valor
+      eficaz, MAXImum = máximo, MINImum = mínimo, RISe = tiempo de subida, FALL = tiempo de bajada.
+      El canal tiene que estar visible.
+    parametros:
+      canal:
+        tipo: entero
+        rango: [1, 2]
+      magnitud:
+        tipo: opcion
+        opciones: [FREQuency, PERIod, PK2pk, AMplitude, MEAN, RMS, MAXImum, MINImum, RISe, FALL]
+    # Elegir qué medir no cambia la señal ni la pantalla. La consulta repite la elección porque
+    # una consulta solo emite `verificacion_scpi` y sin ella leería la medición anterior.
+    plantilla_scpi: "MEASUrement:IMMed:SOUrce CH{canal};TYPe {magnitud}"
+    verificacion_scpi: "MEASUrement:IMMed:SOUrce CH{canal};TYPe {magnitud};VALue?"
+    ejemplos:
+      - cuál es la frecuencia del canal uno
+      - medime el pico a pico del canal dos
+      - qué valor eficaz tiene el canal uno
+
+  autoescala:
+    descripcion: >-
+      Ejecuta el autoset: el equipo ajusta solo las escalas vertical y horizontal y el disparo
+      para mostrar la señal estable. Pisa la configuración manual.
+    plantilla_scpi: "AUTOSet EXECute"
+    sensible: true
+    ejemplos:
+      - hacé un autoset
+      - autoescala
+      - ajustá solo la pantalla

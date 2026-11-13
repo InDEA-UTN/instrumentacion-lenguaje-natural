@@ -54,11 +54,14 @@ def validar(intencion: Intencion, catalogo: CatalogoInstrumento) -> ComandoSCPI 
         return Rechazo(motivo=f"Faltan parámetros de '{accion.id}': {', '.join(sorted(faltantes))}.")
 
     # 3 y 4. Tipo correcto y dentro del rango de este instrumento.
-    valores: dict[str, int | float] = {}
+    valores: dict[str, int | float | str] = {}
     for nombre, crudo in parametros.items():
         definicion = accion.parametro(nombre)
         valor = _convertir(definicion, crudo)
         if valor is None:
+            if definicion.tipo == "opcion":
+                admitidas = ", ".join(definicion.opciones)
+                return Rechazo(motivo=f"'{nombre}' tiene que ser una de: {admitidas}; llegó {crudo!r}.")
             return Rechazo(motivo=f"'{nombre}' tiene que ser {definicion.tipo}; llegó {crudo!r}.")
         if definicion.rango and not (definicion.rango[0] <= valor <= definicion.rango[1]):
             minimo, maximo = definicion.rango
@@ -72,9 +75,11 @@ def validar(intencion: Intencion, catalogo: CatalogoInstrumento) -> ComandoSCPI 
     return armar_comando(accion, valores, consulta=consulta)
 
 
-def _convertir(definicion: DefParametro, crudo: Valor) -> int | float | None:
+def _convertir(definicion: DefParametro, crudo: Valor) -> int | float | str | None:
     if isinstance(crudo, bool):
         return None
+    if definicion.tipo == "opcion":
+        return _opcion(definicion, crudo)
     try:
         numero = float(crudo)
     except (TypeError, ValueError):
@@ -82,3 +87,12 @@ def _convertir(definicion: DefParametro, crudo: Valor) -> int | float | None:
     if definicion.tipo == "entero":
         return int(numero) if numero.is_integer() else None
     return numero
+
+
+def _opcion(definicion: DefParametro, crudo: Valor) -> str | None:
+    """Devuelve la opción tal como la declara el catálogo. Acepta mayúsculas o minúsculas, y un
+    número para opciones numéricas (atenuación de sonda 10 → "10")."""
+    if isinstance(crudo, float) and crudo.is_integer():
+        crudo = int(crudo)
+    texto = str(crudo).strip().upper()
+    return next((o for o in definicion.opciones if o.upper() == texto), None)

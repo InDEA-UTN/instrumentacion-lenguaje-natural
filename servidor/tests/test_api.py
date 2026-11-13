@@ -27,17 +27,17 @@ def _decir(cliente, texto, sesion="s1"):
 def test_salud(cliente):
     r = cliente.get("/salud").json()
     assert r["asr"]["listo"] and r["interprete"]["listo"]
-    assert r["instrumento"]["id"] == "osciloscopio_generico_4ch"
+    assert r["instrumento"]["id"] == "tektronix_tbs1072b"
 
 
 def test_confirmar_actualiza_el_contexto_de_la_sesion(cliente):
-    pendiente = _decir(cliente, "reiniciá el osciloscopio")
+    pendiente = _decir(cliente, "hacé un autoset")
     assert pendiente["estado"] == "confirmacion_pendiente"
     assert "s1" not in modulo._contextos or modulo._contextos["s1"].ultima_intencion is None
 
     r = cliente.post(f"/confirmaciones/{pendiente['id']}", json={"aceptar": True})
     assert r.status_code == 200 and r.json()["estado"] == "ejecutada"
-    assert modulo._contextos["s1"].ultima_intencion.accion == "reiniciar_instrumento"
+    assert modulo._contextos["s1"].ultima_intencion.accion == "autoescala"
     assert modulo._sesion_de_pendiente == {}
 
 

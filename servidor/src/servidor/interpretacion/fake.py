@@ -27,7 +27,13 @@ GUION_DEMO: dict[str, dict] = {
     "subí la escala": {
         "tipo": "aclaracion", "accion": "configurar_escala_vertical", "pregunta": "¿De qué canal?",
     },
-    "reiniciá el osciloscopio": {"tipo": "accion", "accion": "reiniciar_instrumento"},
+    "pasá el canal uno a acoplamiento alterna": {
+        "tipo": "accion", "accion": "configurar_acoplamiento", "parametros": {"canal": 1, "acoplamiento": "AC"},
+    },
+    "cuál es la frecuencia del canal uno": {
+        "tipo": "consulta", "accion": "medir", "parametros": {"canal": 1, "magnitud": "FREQuency"},
+    },
+    "hacé un autoset": {"tipo": "accion", "accion": "autoescala"},
 }
 
 

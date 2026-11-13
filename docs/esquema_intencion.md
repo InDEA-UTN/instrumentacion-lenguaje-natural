@@ -47,21 +47,37 @@ configurar_escala_vertical:
   parametros:
     canal:
       tipo: entero
-      rango: [1, 4]
+      rango: [1, 2]
       obligatorio: true
     valor:
       tipo: real
       unidad: V
-      rango: [1.0e-3, 10.0]
+      rango: [2.0e-3, 50.0]
       obligatorio: true
-  plantilla_scpi: ":CHANnel{canal}:SCALe {valor}"
-  verificacion_scpi: ":CHANnel{canal}:SCALe?"
+  plantilla_scpi: "CH{canal}:SCAle {valor}"
+  verificacion_scpi: "CH{canal}:SCAle?"
   sensible: false
   ejemplos:
     - poné el canal uno en quinientos milivoltios por división
     - subí la escala vertical del canal dos a un volt
     - canal 1 a 50 milivolt
 ```
+
+Un parámetro es de uno de tres tipos:
+
+- `entero` o `real`, con `rango` y, si corresponde, `unidad`.
+- `opcion`, con la lista cerrada de `opciones` escritas tal como las recibe el instrumento:
+
+  ```yaml
+  acoplamiento:
+    tipo: opcion
+    opciones: [AC, DC, GND]
+  ```
+
+  El modelo recibe esa lista como `enum`. El validador acepta mayúsculas o minúsculas, y un número
+  para una opción numérica (atenuación `10` → `"10"`), y siempre emite la opción como la declara el
+  catálogo. Un `opcion` no lleva `rango` ni `unidad`. Ojo con YAML: `ON`, `OFF`, `YES` y `NO` sin
+  comillas se leen como booleanos y el cargador rechaza el catálogo.
 
 Sobre tres campos que no son obvios:
 
