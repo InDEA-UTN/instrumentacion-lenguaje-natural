@@ -7,7 +7,7 @@ def campos_de_plantilla(plantilla: str) -> set[str]:
     return {campo for _, campo, _, _ in Formatter().parse(plantilla) if campo}
 
 
-def armar_comando(accion: Accion, valores: dict[str, int | float], consulta: bool = False) -> ComandoSCPI:
+def armar_comando(accion: Accion, valores: dict[str, int | float | str], consulta: bool = False) -> ComandoSCPI:
     """Instancia las plantillas de la acción. Los valores ya tienen que estar validados."""
     texto = {k: _formatear(v) for k, v in valores.items()}
     verificacion = accion.verificacion_scpi.format(**texto) if accion.verificacion_scpi else None
@@ -23,5 +23,7 @@ def armar_comando(accion: Accion, valores: dict[str, int | float], consulta: boo
     )
 
 
-def _formatear(valor: int | float) -> str:
+def _formatear(valor: int | float | str) -> str:
+    if isinstance(valor, str):  # opcion: ya viene escrita como la espera el instrumento
+        return valor
     return str(valor) if isinstance(valor, int) else f"{valor:g}"

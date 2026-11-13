@@ -24,5 +24,5 @@ class Configuracion(BaseSettings):
     llm_modelo: str = "qwen3.5-4b-q4_k_m"  # solo identifica el modelo; el archivo lo elige el servicio
     llm_timeout_s: float = 60.0  # el primer pedido procesa el prompt entero y en CPU tarda
 
-    catalogo: Path = CATALOGOS / "osciloscopio_generico_4ch.yaml"
+    catalogo: Path = CATALOGOS / "tektronix_tbs1072b.yaml"
     umbral_confianza: float = 0.7

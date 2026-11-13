@@ -28,6 +28,8 @@ def _herramienta(accion: Accion) -> dict:
 
 
 def _propiedad(p: DefParametro) -> dict:
+    if p.tipo == "opcion":
+        return {"type": "string", "enum": list(p.opciones)}
     prop: dict = {"type": _TIPOS[p.tipo]}
     if p.unidad:
         prop["description"] = f"En {p.unidad} (unidades del SI, sin prefijos)."

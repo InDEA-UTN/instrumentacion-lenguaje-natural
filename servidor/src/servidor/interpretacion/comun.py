@@ -39,6 +39,7 @@ Reglas:
 - `accion` es exactamente uno de los identificadores del catálogo, o null.
 - Los valores van en la unidad indicada, en unidades del SI SIN prefijos: "quinientos milivoltios" → 0.5,
   "diez microsegundos" → 0.00001. No incluyas la unidad, solo el número.
+- Un parámetro con `enum` lleva exactamente uno de esos valores, escrito igual: "alterna" → "AC".
 - `confianza` entre 0 y 1: qué tan seguro estás de la interpretación.
 - Usá el contexto SOLO para resolver referencias ("subilo", "el mismo canal") y para completar una
   aclaración pendiente con la respuesta del usuario.
@@ -82,10 +83,16 @@ def esquema_respuesta(catalogo: CatalogoInstrumento) -> dict:
     # Un objeto con propiedades fijas: se declara la unión de los parámetros del catálogo, todos
     # opcionales. Qué corresponde a cada acción lo verifica el validador. Que un nombre tenga un
     # solo tipo en todo el catálogo lo garantiza el cargador.
-    parametros = {
-        p.nombre: {"type": "integer" if p.tipo == "entero" else "number"}
-        for a in catalogo.acciones.values() for p in a.parametros
-    }
+    parametros: dict[str, dict] = {}
+    for a in catalogo.acciones.values():
+        for p in a.parametros:
+            if p.tipo == "opcion":
+                # Dos acciones pueden compartir el nombre con opciones distintas: se declara la
+                # unión y el validador verifica las de cada acción.
+                previo = parametros.setdefault(p.nombre, {"type": "string", "enum": []})
+                previo["enum"] += [o for o in p.opciones if o not in previo["enum"]]
+            else:
+                parametros[p.nombre] = {"type": "integer" if p.tipo == "entero" else "number"}
     return {
         "type": "object",
         "properties": {

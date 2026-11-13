@@ -33,6 +33,44 @@ pasos. Es la memoria del proyecto y el insumo del informe final.
 
 ---
 
+## 2026-11-13 — Instrumento definido: Tektronix TBS1072B, con catálogo de diez acciones
+- **Fase:** 0 (cierra D1) y 1 · **Estado:** 🟨 En curso (falta verificar sobre el equipo)
+- **Objetivo:** relevar del manual de programación los comandos del osciloscopio del laboratorio y
+  correr la cadena sobre su catálogo.
+- **Actividad:**
+  - Se cerró **D1**: el instrumento es un **Tektronix TBS1072B**, de 2 canales y 70 MHz.
+  - Del manual 077-0444-03 se relevaron diez acciones:
+    - escala vertical, acoplamiento, atenuación de sonda y mostrar u ocultar un canal;
+    - base de tiempo;
+    - nivel y fuente del disparo;
+    - RUN/STOP;
+    - medición inmediata;
+    - autoset, la única sensible.
+  - El catálogo reemplaza al del osciloscopio genérico, que se eliminó, y pasa a ser el de por
+    defecto.
+  - Se agregó un tipo de parámetro **`opcion`**, con una lista cerrada de valores (AC/DC/GND,
+    RUN/STOP, tipo de medición). El modelo lo recibe como `enum` y el validador lo normaliza.
+- **Resultado:**
+  - Pasan 57 tests sin servicios externos (eran 36) y los 9 de integración con Qwen y whisper.
+  - Pasa el test del pedido explícito repetido, pendiente desde el 2026-10-25.
+  - Sonda con Qwen3.5-4B sobre los 27 ejemplos del catálogo: **27/27 con la acción correcta**,
+    de 4 a 7 s cada uno.
+    - Un parámetro salió mal: "uno a uno" → atenuación 10. Se corrigió aclarando la descripción
+      de la acción, y después dio 1.
+    - "Canal tres" pide una aclaración, porque el equipo tiene 2 canales.
+  - De punta a punta, con un audio real, ejecutó `CH1:SCAle 0.5` en 8 s.
+  - Gemini no se pudo probar: la API volvió a responder 503 ("high demand").
+  - Los rangos salen del manual y **no están verificados**. Lo que hay que mirar al conectar el
+    equipo está en las particularidades de la ficha, por ejemplo `HEADer OFF` y el `9.9E37` de
+    una medición fallida.
+- **Documentado en:** [`instrumentos/tektronix_tbs1072b.md`](instrumentos/tektronix_tbs1072b.md),
+  [`docs/esquema_intencion.md`](docs/esquema_intencion.md), sección 2, y
+  [`00_PLAN.md`](00_PLAN.md), decisiones cerradas.
+- **Próximo paso:**
+  - Escribir la conexión PyVISA real, que envíe `HEADer OFF` al abrir.
+  - Conectar el TBS1072B por USB y verificar cada comando a mano, anotando `*IDN?`, el firmware y
+    los rangos reales.
+
 ## 2026-11-06 — Correcciones del servidor tras la revisión
 - **Fase:** 1 · **Estado:** 🟨 En curso (falta probar el prompt con Qwen)
 - **Objetivo:** resolver los pendientes de código de la revisión de hoy (entrada siguiente).

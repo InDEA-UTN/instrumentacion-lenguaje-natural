@@ -24,7 +24,7 @@ Un par *(enunciado, intención)*, más el contexto necesario para desambiguar:
 ```json
 {
   "enunciado": "poné el canal uno en quinientos milivoltios por división",
-  "instrumento": "osciloscopio_generico_4ch",
+  "instrumento": "tektronix_tbs1072b",
   "contexto": { "canal_activo": 1 },
   "intencion": {
     "tipo": "accion",

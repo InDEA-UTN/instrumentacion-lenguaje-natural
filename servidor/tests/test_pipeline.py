@@ -26,7 +26,7 @@ async def test_ejecuta_y_lee_el_instrumento(catalogo, instrumento):
     p = _pipeline(catalogo, instrumento, "poné el canal uno en quinientos milivoltios por división")
     i = await p.procesar(AUDIO, Contexto())
     assert i.estado == EstadoInteraccion.EJECUTADA
-    assert instrumento.historial == [":CHANnel1:SCALe 0.5", ":CHANnel1:SCALe?"]
+    assert instrumento.historial == ["CH1:SCAle 0.5", "CH1:SCAle?"]
     assert i.resultado.lectura == "0.5"
     assert i.transcripcion.modelo.nombre == "asr-fake"
     assert i.intencion.modelo.nombre == "interprete-fake"
@@ -35,7 +35,7 @@ async def test_ejecuta_y_lee_el_instrumento(catalogo, instrumento):
 async def test_consulta(catalogo, instrumento):
     i = await _pipeline(catalogo, instrumento, "¿En cuánto está la escala del canal dos?").procesar(AUDIO, Contexto())
     assert i.estado == EstadoInteraccion.CONSULTADA
-    assert instrumento.historial == [":CHANnel2:SCALe?"]
+    assert instrumento.historial == ["CH2:SCAle?"]
 
 
 async def test_fuera_de_alcance_no_toca_el_instrumento(catalogo, instrumento):
@@ -52,13 +52,13 @@ async def test_aclaracion_queda_en_el_contexto(catalogo, instrumento):
 
 
 async def test_sensible_espera_confirmacion(catalogo, instrumento):
-    p = _pipeline(catalogo, instrumento, "reiniciá el osciloscopio")
+    p = _pipeline(catalogo, instrumento, "hacé un autoset")
     i = await p.procesar(AUDIO, Contexto())
     assert i.estado == EstadoInteraccion.CONFIRMACION_PENDIENTE
     assert instrumento.historial == []
     hecha = await p.confirmar(i.id, aceptar=True)
     assert hecha.estado == EstadoInteraccion.EJECUTADA and hecha.id == i.id
-    assert instrumento.historial == ["*RST"]
+    assert instrumento.historial == ["AUTOSet EXECute"]
 
 
 async def test_baja_confianza_espera_confirmacion(catalogo, instrumento):
@@ -74,11 +74,31 @@ async def test_baja_confianza_espera_confirmacion(catalogo, instrumento):
     assert instrumento.historial == []
 
 
+async def test_opcion_se_ejecuta_como_la_declara_el_catalogo(catalogo, instrumento):
+    i = await _pipeline(catalogo, instrumento, "pasá el canal uno a acoplamiento alterna").procesar(AUDIO, Contexto())
+    assert i.estado == EstadoInteraccion.EJECUTADA
+    assert instrumento.historial == ["CH1:COUPling AC", "CH1:COUPling?"]
+    assert str(i.comando.parametros["acoplamiento"]) == "AC"
+
+
+async def test_medicion_consultada_elige_que_medir(catalogo, instrumento):
+    # Una consulta solo emite la verificación: tiene que llevar la fuente y el tipo de medición.
+    i = await _pipeline(catalogo, instrumento, "cuál es la frecuencia del canal uno").procesar(AUDIO, Contexto())
+    assert i.estado == EstadoInteraccion.CONSULTADA
+    assert instrumento.historial == ["MEASUrement:IMMed:SOUrce CH1;TYPe FREQuency;VALue?"]
+
+
+def test_esquema_de_una_opcion(catalogo):
+    herramientas = {h["nombre"]: h for h in a_json_schema(catalogo)}
+    acoplamiento = herramientas["configurar_acoplamiento"]["parametros"]["properties"]["acoplamiento"]
+    assert acoplamiento == {"type": "string", "enum": ["AC", "DC", "GND"]}
+
+
 def test_esquema_derivado_del_catalogo(catalogo):
     herramientas = {h["nombre"]: h for h in a_json_schema(catalogo)}
     escala = herramientas["configurar_escala_vertical"]["parametros"]
     assert escala["required"] == ["canal", "valor"]
-    assert escala["properties"]["canal"] == {"type": "integer", "minimum": 1, "maximum": 4}
+    assert escala["properties"]["canal"] == {"type": "integer", "minimum": 1, "maximum": 2}
 
 
 async def test_rechazo_no_cambia_el_contexto(catalogo, instrumento):
@@ -95,7 +115,7 @@ async def test_rechazo_no_cambia_el_contexto(catalogo, instrumento):
 
 async def test_pendiente_no_cambia_el_contexto_y_cancelar_cierra_la_aclaracion(catalogo, instrumento):
     previo = Contexto(canal_activo=2, aclaracion_pendiente=None)
-    p = _pipeline(catalogo, instrumento, "reiniciá el osciloscopio")
+    p = _pipeline(catalogo, instrumento, "hacé un autoset")
     pendiente = await p.procesar(AUDIO, previo)
     assert actualizar_contexto(previo, pendiente) == previo
 

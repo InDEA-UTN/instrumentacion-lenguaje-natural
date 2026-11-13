@@ -11,10 +11,11 @@ Facultad Regional Mendoza.
 
 - **Responsable:** Juan Pablo Masuet — Práctica Profesional Supervisada (PPS)
 - **Director:** Javier Velez
-- **Estado:** Fase 0 — relevamiento y definiciones, con las cinco decisiones (D1 a D5) todavía
-  abiertas. En paralelo, la cadena de la etapa 1 ya funciona de punta a punta contra un
-  **instrumento simulado**: front web de prueba, whisper.cpp, un intérprete local (Qwen3.5-4B sobre
-  llama.cpp) o Gemini, validación determinística y ejecución. El detalle está en
+- **Estado:** Fase 0 — relevamiento y definiciones. D1 está cerrada: el instrumento es un
+  [Tektronix TBS1072B](instrumentos/tektronix_tbs1072b.md). D2 a D5 siguen abiertas. En paralelo,
+  la cadena de la etapa 1 ya funciona de punta a punta contra una **simulación del TBS1072B**, con
+  un catálogo de diez acciones: front web de prueba, whisper.cpp, un intérprete local (Qwen3.5-4B
+  sobre llama.cpp) o Gemini, validación determinística y ejecución. El detalle está en
   [`BITACORA.md`](BITACORA.md).
 - **Licencia:** [MIT](LICENSE)
 
@@ -60,7 +61,7 @@ El proyecto avanza en etapas deliberadamente cortas, cada una con un entregable 
 
 | Etapa | Qué se construye | Estado |
 |---|---|---|
-| **1 — Prototipo** | Cadena completa extremo a extremo con un modelo comercial de pago y un catálogo de **entre cinco y diez acciones** sobre un solo instrumento. Sirve para validar la idea, no para producción. | En curso: cadena completa sobre un instrumento simulado y un catálogo de tres acciones; falta el instrumento real (D1) |
+| **1 — Prototipo** | Cadena completa extremo a extremo con un modelo comercial de pago y un catálogo de **entre cinco y diez acciones** sobre un solo instrumento. Sirve para validar la idea, no para producción. | En curso: cadena completa sobre la simulación del TBS1072B con diez acciones; falta conectar y verificar el equipo real |
 | **2 — Ampliación** | Catálogo extendido, esquema de intención formalizado, cobertura de más instrumentos y del vocabulario real de los usuarios. | Pendiente |
 | **3 — Modelo propio** | Construcción del conjunto de datos y **ajuste fino** de un modelo abierto y chico (Qwen3-4B, Gemma 3 4B o equivalente, a definir) que corra en el laboratorio sin depender de un servicio pago. | Pendiente |
 | **4 — Evaluación** | Comparación de la cascada contra un **modelo multimodal con entrada de voz**, que se saltea la etapa de transcripción. Métricas, informe final. | Pendiente |

@@ -84,10 +84,11 @@ Procedimiento para cada instrumento que se incorpore, en este orden:
 
 ## 5. Catálogo de la etapa 1
 
-*(Pendiente de la decisión D1: instrumento objetivo.)*
+El instrumento de la etapa 1 es un **Tektronix TBS1072B** (D1, cerrada el 2026-11-13). Su
+catálogo tiene diez acciones, relevadas del manual de programación. Están en la ficha
+[`../instrumentos/tektronix_tbs1072b.md`](../instrumentos/tektronix_tbs1072b.md).
 
-Como referencia del tipo de operación que se busca cubrir en el prototipo —entre cinco y diez
-acciones sobre un osciloscopio—:
+La tabla de abajo era la referencia previa del tipo de operación que se buscaba cubrir:
 
 | Operación | Ejemplo de pedido hablado |
 |---|---|

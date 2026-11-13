@@ -11,7 +11,7 @@ from enum import StrEnum
 from typing import Literal
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 Valor = int | float | str
 
@@ -41,10 +41,23 @@ class ModeloInfo(_Inmutable):
 
 class DefParametro(_Inmutable):
     nombre: str
-    tipo: Literal["entero", "real"]
+    tipo: Literal["entero", "real", "opcion"]
     unidad: str | None = None  # unidad del SI; la fija el catálogo, no el modelo
     rango: tuple[float, float] | None = None
+    # Para `opcion`: los valores admitidos, escritos tal como los recibe el instrumento (ej. "AC").
+    opciones: tuple[str, ...] = ()
     obligatorio: bool = True
+
+    @model_validator(mode="after")
+    def _coherente(self) -> DefParametro:
+        if self.tipo == "opcion":
+            if not self.opciones:
+                raise ValueError(f"'{self.nombre}' es de tipo opcion y no declara `opciones`")
+            if self.rango or self.unidad:
+                raise ValueError(f"'{self.nombre}' es de tipo opcion: no lleva `rango` ni `unidad`")
+        elif self.opciones:
+            raise ValueError(f"'{self.nombre}' declara `opciones` pero es de tipo {self.tipo}")
+        return self
 
 
 class Accion(_Inmutable):
@@ -78,11 +91,12 @@ class CatalogoInstrumento(_Inmutable):
 
 
 class Magnitud(_Inmutable):
-    valor: int | float
+    valor: int | float | str  # str para un parámetro de tipo opcion
     unidad: str | None = None
 
     def __str__(self) -> str:
-        return f"{self.valor:g} {self.unidad}" if self.unidad else f"{self.valor:g}"
+        texto = self.valor if isinstance(self.valor, str) else f"{self.valor:g}"
+        return f"{texto} {self.unidad}" if self.unidad else texto
 
 
 # ---------------------------------------------------------------------------
