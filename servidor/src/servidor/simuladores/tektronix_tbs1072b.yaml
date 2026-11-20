@@ -1,0 +1,122 @@
+# Simulador pyvisa-sim del Tektronix TBS1072B (ficha: instrumentos/tektronix_tbs1072b.md).
+#
+# Imita los comandos del catálogo con los valores de fábrica del manual (apéndice B). No imita el
+# redondeo de la base de tiempo, la dependencia de la escala con la sonda ni el registro de
+# eventos: *ESR? siempre responde 0. Sirve para probar el camino PyVISA sin el equipo, no para
+# validar rangos.
+#
+# Uso: INSTRUMENTO=visa VISA_BACKEND=<ruta a este archivo>@sim
+#
+# Diferencias con el equipo real (anotadas para no confundirse):
+# - SELect:CH<x>? devuelve lo que se escribió (ON/OFF); el equipo devuelve 1 o 0.
+# - CH<x>:PRObe? devuelve "10"; el equipo devuelve "1.0E1".
+# - Las mediciones devuelven valores fijos, solo para las combinaciones de abajo.
+
+spec: "1.1"
+
+devices:
+  tbs1072b:
+    eom:
+      USB INSTR: {q: "\n", r: "\n"}
+    # pyvisa-sim corta los mensajes por ";" y responde cada parte. Las mediciones están escritas
+    # como diálogos completos (SOUrce;TYPe;VALue?), así que se usa un delimitador que no aparece.
+    delimiter: "|"
+    error: ERROR
+    dialogues:
+      - {q: "*IDN?", r: "TEKTRONIX,TBS1072B,C010001,CF:91.1CT FV:v4.03"}
+      - {q: "*CLS"}
+      - {q: "*ESR?", r: "0"}
+      - {q: "ALLEv?", r: '0,"No events to report - queue empty"'}
+      # Canal 1 visible con una señal de 1 kHz y 2 Vpp; el canal 2 está apagado (de fábrica).
+      - {q: "MEASUrement:IMMed:SOUrce CH1;TYPe FREQuency;VALue?", r: "1.0E3"}
+      - {q: "MEASUrement:IMMed:SOUrce CH1;TYPe PERIod;VALue?", r: "1.0E-3"}
+      - {q: "MEASUrement:IMMed:SOUrce CH1;TYPe PK2pk;VALue?", r: "2.0E0"}
+      - {q: "MEASUrement:IMMed:SOUrce CH2;TYPe FREQuency;VALue?", r: "9.9E37"}
+    properties:
+      encabezados:
+        default: "ON"
+        getter: {q: "HEADer?", r: "{:s}"}
+        setter: {q: "HEADer {:s}"}
+        specs: {type: str, valid: ["ON", "OFF"]}
+      escala_ch1:
+        default: 1.0
+        getter: {q: "CH1:SCAle?", r: "{:.1E}"}
+        setter: {q: "CH1:SCAle {:s}"}
+        specs: {type: float, min: 2.0e-3, max: 50.0}
+      acoplamiento_ch1:
+        default: DC
+        getter: {q: "CH1:COUPling?", r: "{:s}"}
+        setter: {q: "CH1:COUPling {:s}"}
+        specs: {type: str, valid: [AC, DC, GND]}
+      sonda_ch1:
+        default: "10"
+        getter: {q: "CH1:PRObe?", r: "{:s}"}
+        setter: {q: "CH1:PRObe {:s}"}
+        specs: {type: str, valid: ["1", "10", "20", "50", "100", "500", "1000"]}
+      visible_ch1:
+        default: "1"
+        getter: {q: "SELect:CH1?", r: "{:s}"}
+        setter: {q: "SELect:CH1 {:s}"}
+        specs: {type: str, valid: ["ON", "OFF", "1", "0"]}
+      escala_ch2:
+        default: 1.0
+        getter: {q: "CH2:SCAle?", r: "{:.1E}"}
+        setter: {q: "CH2:SCAle {:s}"}
+        specs: {type: float, min: 2.0e-3, max: 50.0}
+      acoplamiento_ch2:
+        default: DC
+        getter: {q: "CH2:COUPling?", r: "{:s}"}
+        setter: {q: "CH2:COUPling {:s}"}
+        specs: {type: str, valid: [AC, DC, GND]}
+      sonda_ch2:
+        default: "10"
+        getter: {q: "CH2:PRObe?", r: "{:s}"}
+        setter: {q: "CH2:PRObe {:s}"}
+        specs: {type: str, valid: ["1", "10", "20", "50", "100", "500", "1000"]}
+      visible_ch2:
+        default: "0"
+        getter: {q: "SELect:CH2?", r: "{:s}"}
+        setter: {q: "SELect:CH2 {:s}"}
+        specs: {type: str, valid: ["ON", "OFF", "1", "0"]}
+      base_tiempo:
+        default: 5.0e-4
+        getter: {q: "HORizontal:MAIn:SCAle?", r: "{:.1E}"}
+        setter: {q: "HORizontal:MAIn:SCAle {:s}"}
+        specs: {type: float, min: 5.0e-9, max: 50.0}
+      nivel_disparo:
+        default: 0.0
+        getter: {q: "TRIGger:MAIn:LEVel?", r: "{:.2E}"}
+        setter: {q: "TRIGger:MAIn:LEVel {:s}"}
+        specs: {type: float, min: -50.0, max: 50.0}
+      fuente_disparo:
+        default: CH1
+        getter: {q: "TRIGger:MAIn:EDGE:SOUrce?", r: "{:s}"}
+        setter: {q: "TRIGger:MAIn:EDGE:SOUrce {:s}"}
+        specs: {type: str, valid: [CH1, CH2, EXT, EXT5, LINE]}
+      adquisicion:
+        default: RUN
+        getter: {q: "ACQuire:STATE?", r: "{:s}"}
+        setter: {q: "ACQuire:STATE {:s}"}
+        specs: {type: str, valid: [RUN, STOP]}
+      medicion:
+        default: "CH1;TYPe PERIod"
+        setter: {q: "MEASUrement:IMMed:SOUrce {:s}"}
+      autoset:
+        default: ""
+        setter: {q: "AUTOSet {:s}"}
+        specs: {type: str, valid: ["", EXECute]}
+
+  # Otro osciloscopio en el mismo bus: el servidor no tiene que confundirlo con el del catálogo.
+  otro:
+    eom:
+      USB INSTR: {q: "\n", r: "\n"}
+    error: ERROR
+    dialogues:
+      - {q: "*IDN?", r: "TEKTRONIX,TDS2012C,C020002,CF:91.1CT FV:v24.26"}
+
+resources:
+  # Números de producto y de serie ficticios.
+  USB0::0x0699::0x0363::C020002::INSTR:
+    device: otro
+  USB0::0x0699::0x0368::C010001::INSTR:
+    device: tbs1072b

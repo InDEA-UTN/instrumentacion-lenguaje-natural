@@ -4,8 +4,9 @@ from collections.abc import Callable
 
 from .catalogo import cargar_catalogo
 from .config import Configuracion
-from .dominio.puertos import Interprete, MotorASR
-from .ejecucion import Ejecutor, InstrumentoFake
+from .dominio.modelos import CatalogoInstrumento
+from .dominio.puertos import ConexionInstrumento, Interprete, MotorASR
+from .ejecucion import ConexionVisa, Ejecutor, InstrumentoFake
 from .interpretacion.fake import InterpreteFake
 from .interpretacion.gemini import Gemini
 from .interpretacion.llama_cpp import LlamaCpp
@@ -25,19 +26,33 @@ INTERPRETES: dict[str, Callable[[Configuracion], Interprete]] = {
 }
 
 
-def _elegir[T](registro: dict[str, Callable[[Configuracion], T]], nombre: str, que: str, c: Configuracion) -> T:
+CONEXIONES: dict[str, Callable[[Configuracion, CatalogoInstrumento], ConexionInstrumento]] = {
+    "fake": lambda c, cat: InstrumentoFake(),
+    "visa": lambda c, cat: ConexionVisa(
+        modelo=cat.instrumento.modelo,
+        recurso=c.visa_recurso or cat.instrumento.recurso_visa,
+        backend=c.visa_backend,
+        timeout_ms=c.visa_timeout_ms,
+        al_conectar=c.visa_al_conectar,
+        consulta_eventos=c.visa_consulta_eventos,
+    ),
+}
+
+
+def _elegir[T](registro: dict[str, Callable[..., T]], nombre: str, que: str, *args) -> T:
     try:
-        return registro[nombre](c)
+        return registro[nombre](*args)
     except KeyError:
         raise ValueError(f"{que} '{nombre}' desconocido. Disponibles: {', '.join(registro)}") from None
 
 
 def construir_pipeline(c: Configuracion | None = None) -> ProcesarPedido:
     c = c or Configuracion()
+    catalogo = cargar_catalogo(c.catalogo)
     return ProcesarPedido(
         asr=_elegir(MOTORES_ASR, c.asr_motor, "Motor de ASR", c),
         interprete=_elegir(INTERPRETES, c.interprete, "Intérprete", c),
-        catalogo=cargar_catalogo(c.catalogo),
-        ejecutor=Ejecutor(InstrumentoFake()),  # PyVISA real cuando se cierre D1
+        catalogo=catalogo,
+        ejecutor=Ejecutor(_elegir(CONEXIONES, c.instrumento, "Instrumento", c, catalogo)),
         umbral_confianza=c.umbral_confianza,
     )

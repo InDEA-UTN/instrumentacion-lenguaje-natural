@@ -74,10 +74,59 @@ O todo junto desde la raíz: `docker compose up -d` (servidor en el puerto 8000)
 
 Los modelos se eligen por variables de entorno (ver `src/servidor/config.py`): `ASR_MOTOR`
 (`whisper_cpp`, `fake`), `ASR_URL`, `INTERPRETE` (`fake`, `gemini`, `llama_cpp`), `GEMINI_API_KEY`,
-`GEMINI_MODELO`, `LLM_URL`, `LLM_MODELO`, `LLM_TIMEOUT_S`, `CATALOGO`, `UMBRAL_CONFIANZA`. El
+`GEMINI_MODELO`, `LLM_URL`, `LLM_MODELO`, `LLM_TIMEOUT_S`, `CATALOGO`, `UMBRAL_CONFIANZA`,
+`INSTRUMENTO` (`fake`, `visa`) y las `VISA_*` de la sección siguiente. El
 docker-compose usa `llama_cpp`; el modelo local se baja a mano (ver
 [`../modelos/llm/README.md`](../modelos/llm/README.md)). Para desarrollo local van en `servidor/.env`, que
 no se versiona.
+
+## Conectar el osciloscopio real
+
+Con `INSTRUMENTO=visa`, el servidor habla con el equipo por PyVISA
+([`src/servidor/ejecucion/visa.py`](src/servidor/ejecucion/visa.py)). Usa pyvisa-py, que no
+necesita los drivers del fabricante.
+
+```bash
+# Con Docker: el contenedor ve el bus USB del host.
+INSTRUMENTO=visa docker compose up -d servidor
+
+# Sin Docker: hace falta el extra `visa` y permiso sobre el USB (ver abajo).
+pip install -e '.[visa]'
+INSTRUMENTO=visa uvicorn servidor.api.app:app
+```
+
+La línea de salud del front pasa a decir "TBS1072B ✓ conectado". Qué hace la conexión:
+
+- **Busca el equipo sola.** Pregunta `*IDN?` a cada instrumento USB y elige el que nombra el
+  `modelo` del catálogo. `VISA_RECURSO` fija la cadena VISA si hace falta. Con un modelo
+  distinto no se conecta: un catálogo del TBS1072B no le manda comandos a otro equipo.
+- **Al abrir envía `*CLS` y `HEADer OFF`** (`VISA_AL_CONECTAR`), para que las consultas devuelvan
+  solo el valor.
+- **Después de cada mensaje lee `*ESR?`.** Si el equipo marcó un error, el pedido queda rechazado
+  con el detalle de `ALLEv?` (`VISA_CONSULTA_EVENTOS`). Una medición que devuelve `9.9E37` también
+  se rechaza: significa que no hubo dato.
+- **Un pedido a la vez.** La escritura y su verificación no se intercalan con otro pedido.
+- **Arranca y se reconecta sola.** El servidor arranca sin el equipo enchufado; si se pierde la
+  comunicación, el próximo pedido reabre. Mientras no haya equipo, un pedido responde 503.
+- `VISA_TIMEOUT_MS` vale 10 s por defecto, porque el autoset tarda unos segundos.
+
+**Permisos sobre el USB, solo sin Docker.** Por defecto, un usuario común no puede abrir el
+dispositivo. Se habilita una vez con una regla de udev para los equipos Tektronix (fabricante
+`0699`) y se reconecta el cable:
+
+```bash
+echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="0699", MODE="0660", GROUP="plugdev"' \
+  | sudo tee /etc/udev/rules.d/99-tektronix.rules
+sudo udevadm control --reload-rules
+```
+
+**Simulador.** [`src/servidor/simuladores/tektronix_tbs1072b.yaml`](src/servidor/simuladores/tektronix_tbs1072b.yaml)
+imita al equipo con pyvisa-sim. Lo usan los tests de `tests/test_visa.py`, y sirve para probar el
+camino PyVISA a mano:
+
+```bash
+INSTRUMENTO=visa VISA_BACKEND="$PWD/src/servidor/simuladores/tektronix_tbs1072b.yaml@sim" uvicorn servidor.api.app:app
+```
 
 ## Cómo agregar un modelo
 

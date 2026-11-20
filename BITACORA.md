@@ -33,6 +33,40 @@ pasos. Es la memoria del proyecto y el insumo del informe final.
 
 ---
 
+## 2026-11-13 — Conexión PyVISA con el osciloscopio real
+- **Fase:** 1 · **Estado:** 🟨 En curso (falta probarla con el equipo enchufado)
+- **Objetivo:** que el servidor pueda manejar el TBS1072B real, sin perder las garantías del
+  instrumento simulado.
+- **Actividad:**
+  - Adaptador `ConexionVisa` con pyvisa-py, que no necesita drivers del fabricante. Se elige con
+    `INSTRUMENTO=visa`; el modo por defecto sigue siendo el simulado en memoria.
+    - **Identidad:** busca por USB el equipo cuyo `*IDN?` nombra el modelo del catálogo y no se
+      conecta a otro.
+    - **Preparación:** al abrir envía `*CLS` y `HEADer OFF`.
+    - **Rechazos:** después de cada mensaje lee `*ESR?`. Un comando que el equipo rechaza, o una
+      medición sin dato (`9.9E37`), termina en un pedido rechazado con el motivo.
+    - **Acceso serializado:** la escritura y su verificación no se intercalan entre pedidos. Era
+      uno de los pendientes de la revisión del 2026-11-06.
+    - **Disponibilidad:** el servidor arranca sin el equipo y se reconecta solo. Sin equipo, un
+      pedido responde 503.
+  - Simulador pyvisa-sim del TBS1072B, con un segundo osciloscopio en el bus para probar que no
+    se confunde de equipo.
+  - Docker: `libusb` en la imagen y el bus USB del host montado en el contenedor, para poder
+    enchufar el equipo con el servidor andando.
+  - El front muestra si el instrumento está conectado.
+- **Resultado:**
+  - Pasan 76 tests sin servicios externos (eran 57). Entre ellos, las diez acciones del catálogo
+    por PyVISA contra el simulador.
+  - En el contenedor con `INSTRUMENTO=visa` y sin equipo, `/salud` informa "no conectado" y un
+    pedido recibe 503 con "No se encontró un TBS1072B".
+  - **No se probó con el equipo**: no estaba conectado.
+- **Documentado en:** [`servidor/README.md`](servidor/README.md), sección "Conectar el
+  osciloscopio real", y [`instrumentos/tektronix_tbs1072b.md`](instrumentos/tektronix_tbs1072b.md).
+- **Próximo paso:**
+  - Enchufar el TBS1072B y verificar cada comando a mano, anotando `*IDN?`, el firmware, la
+    cadena VISA y los rangos reales.
+  - Confirmar que pyvisa-py le saca el dispositivo al driver `usbtmc` del kernel.
+
 ## 2026-11-13 — Instrumento definido: Tektronix TBS1072B, con catálogo de diez acciones
 - **Fase:** 0 (cierra D1) y 1 · **Estado:** 🟨 En curso (falta verificar sobre el equipo)
 - **Objetivo:** relevar del manual de programación los comandos del osciloscopio del laboratorio y

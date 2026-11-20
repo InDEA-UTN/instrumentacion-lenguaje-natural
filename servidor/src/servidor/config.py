@@ -25,4 +25,11 @@ class Configuracion(BaseSettings):
     llm_timeout_s: float = 60.0  # el primer pedido procesa el prompt entero y en CPU tarda
 
     catalogo: Path = CATALOGOS / "tektronix_tbs1072b.yaml"
+
+    instrumento: str = "fake"  # ver registro.CONEXIONES; "visa" para el equipo real
+    visa_recurso: str | None = None  # None: se busca por USB el modelo del catálogo
+    visa_backend: str = "@py"  # pyvisa-py; "ruta.yaml@sim" para pyvisa-sim
+    visa_timeout_ms: int = 10_000  # el autoset tarda unos segundos en devolver el control
+    visa_al_conectar: list[str] = ["HEADer OFF"]  # en JSON si se define por entorno
+    visa_consulta_eventos: str | None = "ALLEv?"  # Tektronix; en otros fabricantes, SYSTem:ERRor?
     umbral_confianza: float = 0.7

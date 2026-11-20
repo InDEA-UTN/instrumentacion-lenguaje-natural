@@ -6,7 +6,14 @@ from fastapi import FastAPI, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from ..dominio.errores import InteraccionInexistente, ModeloNoDisponible, RespuestaInvalida
+import asyncio
+
+from ..dominio.errores import (
+    InstrumentoNoDisponible,
+    InteraccionInexistente,
+    ModeloNoDisponible,
+    RespuestaInvalida,
+)
 from ..dominio.modelos import Contexto, EstadoInteraccion, Grabacion, Interaccion
 from ..pipeline import actualizar_contexto
 from ..registro import construir_pipeline
@@ -21,6 +28,8 @@ _sesion_de_pendiente: dict[str, str] = {}
 async def _ciclo_de_vida(app: FastAPI):
     app.state.pipeline = construir_pipeline()
     yield
+    if cerrar := getattr(app.state.pipeline.ejecutor.conexion, "cerrar", None):
+        cerrar()
 
 
 app = FastAPI(title="Instrumentación por lenguaje natural", lifespan=_ciclo_de_vida)
@@ -33,7 +42,12 @@ async def salud():
     return {
         "asr": {**p.asr.info().model_dump(), "listo": await p.asr.salud()},
         "interprete": {**p.interprete.info().model_dump(), "listo": await p.interprete.salud()},
-        "instrumento": p.catalogo.instrumento.model_dump(),
+        "instrumento": {
+            **p.catalogo.instrumento.model_dump(),
+            "conexion": type(p.ejecutor.conexion).__name__,
+            "listo": await asyncio.to_thread(p.ejecutor.conexion.salud),
+            "idn_conectado": getattr(p.ejecutor.conexion, "idn", None),
+        },
     }
 
 
@@ -47,7 +61,7 @@ async def crear_pedido(audio: UploadFile, sesion: str = Form("default")) -> Inte
     contexto = _contextos.get(sesion, Contexto())
     try:
         interaccion = await app.state.pipeline.procesar(grabacion, contexto)
-    except ModeloNoDisponible as e:
+    except (ModeloNoDisponible, InstrumentoNoDisponible) as e:
         raise HTTPException(503, str(e)) from e
     except RespuestaInvalida as e:
         raise HTTPException(502, str(e)) from e
@@ -67,6 +81,10 @@ async def confirmar(interaccion_id: str, confirmacion: Confirmacion) -> Interacc
         interaccion = await app.state.pipeline.confirmar(interaccion_id, confirmacion.aceptar)
     except InteraccionInexistente as e:
         raise HTTPException(404, f"No hay confirmación pendiente con id {interaccion_id}") from e
+    except InstrumentoNoDisponible as e:
+        # La confirmación ya se consumió: el usuario tiene que repetir el pedido.
+        _sesion_de_pendiente.pop(interaccion_id, None)
+        raise HTTPException(503, f"{e} Repetí el pedido cuando el instrumento esté disponible.") from e
     if (sesion := _sesion_de_pendiente.pop(interaccion_id, None)) is not None:
         _contextos[sesion] = actualizar_contexto(_contextos.get(sesion, Contexto()), interaccion)
     return interaccion

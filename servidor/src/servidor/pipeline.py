@@ -5,7 +5,7 @@ Recibe los modelos por sus puertos: no sabe cuál está detrás de cada uno.
 
 import asyncio
 
-from .dominio.errores import InteraccionInexistente
+from .dominio.errores import InteraccionInexistente, RechazoDelInstrumento
 from .dominio.modelos import (
     CatalogoInstrumento,
     ComandoSCPI,
@@ -34,7 +34,7 @@ class ProcesarPedido:
         self.asr = asr
         self.interprete = interprete
         self.catalogo = catalogo
-        self._ejecutor = ejecutor
+        self.ejecutor = ejecutor
         self._umbral = umbral_confianza
         self._pendientes: dict[str, Interaccion] = {}
 
@@ -81,7 +81,15 @@ class ProcesarPedido:
 
     async def _ejecutar(self, interaccion: Interaccion) -> Interaccion:
         comando = interaccion.comando
-        resultado = await asyncio.to_thread(self._ejecutor.ejecutar, comando)
+        try:
+            resultado = await asyncio.to_thread(self.ejecutor.ejecutar, comando)
+        except RechazoDelInstrumento as e:
+            # El validador lo dejó pasar pero el equipo no: se informa como rechazo, con su motivo.
+            # InstrumentoNoDisponible no se atrapa acá: no es una respuesta del equipo (API: 503).
+            rechazo = Rechazo(motivo=str(e))
+            return interaccion.model_copy(update={
+                "estado": EstadoInteraccion.RECHAZADA, "mensaje": rechazo.motivo, "rechazo": rechazo,
+            })
         consulta = comando.escritura is None
         lectura = f" El instrumento responde: {resultado.lectura}." if resultado.lectura is not None else ""
         return interaccion.model_copy(update={

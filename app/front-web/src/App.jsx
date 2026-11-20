@@ -28,7 +28,12 @@ function LineaSalud({ salud }) {
   return (
     <p className="salud">
       ASR: {modelo(salud.asr)} · Intérprete: {modelo(salud.interprete)} · Instrumento:{' '}
-      {salud.instrumento.id} ({salud.instrumento.estado})
+      <span className={salud.instrumento.listo ? 'ok' : 'mal'}>
+        {salud.instrumento.modelo}{' '}
+        {salud.instrumento.conexion === 'InstrumentoFake'
+          ? '(simulado en memoria)'
+          : salud.instrumento.listo ? '✓ conectado' : '✗ no conectado'}
+      </span>
     </p>
   )
 }

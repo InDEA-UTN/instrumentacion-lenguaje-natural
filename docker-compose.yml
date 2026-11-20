@@ -62,6 +62,14 @@ services:
       - ASR_URL=http://whisper:8080
       - INTERPRETE=llama_cpp
       - LLM_URL=http://llm:8080
+      # fake: osciloscopio en memoria. visa: el TBS1072B real por USB (INSTRUMENTO=visa docker compose up -d).
+      - INSTRUMENTO=${INSTRUMENTO:-fake}
+    # El bus USB entero y no un dispositivo fijo: así el osciloscopio se puede enchufar con el
+    # servidor andando. 189 es el número mayor de los dispositivos USB en Linux.
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    device_cgroup_rules:
+      - "c 189:* rmw"
     env_file:
       - path: ./servidor/.env  # GEMINI_API_KEY, etc.; lo de arriba tiene prioridad
         required: false

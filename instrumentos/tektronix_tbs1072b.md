@@ -58,7 +58,16 @@ Lo que dice el manual y conviene tener presente al verificar:
   mnemónico.
 - **`ACQuire:STATE?` y `SELect:CH<x>?`** responden `0` o `1`, no `STOP`/`RUN` ni `OFF`/`ON`.
 
+## Conexión
+
+Por USB con PyVISA (`INSTRUMENTO=visa`). Cómo conectarlo está en
+[`servidor/README.md`](../servidor/README.md), sección "Conectar el osciloscopio real". La
+conexión ya aplica lo de arriba: envía `HEADer OFF` al abrir, lee `*ESR?` y `ALLEv?` después de
+cada comando y trata `9.9E37` como medición fallida.
+
 ## Simulador
 
-Por ahora el servidor usa el instrumento en memoria (`servidor/src/servidor/ejecucion/instrumento_fake.py`).
-Todavía no hay un archivo de `pyvisa-sim` para este equipo.
+[`servidor/src/servidor/simuladores/tektronix_tbs1072b.yaml`](../servidor/src/servidor/simuladores/tektronix_tbs1072b.yaml),
+para pyvisa-sim. Imita los comandos del catálogo con los valores de fábrica. No imita el redondeo,
+la dependencia de la escala con la sonda ni el registro de eventos. Las diferencias con el equipo
+están anotadas en el archivo.
