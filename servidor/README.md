@@ -68,17 +68,124 @@ O todo junto desde la raíz: `docker compose up -d` (servidor en el puerto 8000)
 
 | Endpoint | Qué hace |
 |---|---|
-| `GET /salud` | Qué modelo hay detrás de cada puerto y si responde. |
-| `POST /pedidos` | Audio (`multipart`, campo `audio`; opcional `sesion`) → `Interaccion`. |
+| `GET /salud` | Los modelos predeterminados, el instrumento y si responden. |
+| `GET /modelos` | Por etapa, los proveedores con sus modelos y si están disponibles (el selector del front). `?refrescar=true` no usa la consulta guardada (30 s). |
+| `POST /pedidos` | Audio (`multipart`, campo `audio`; opcionales `sesion`, `asr` e `interprete` con un `proveedor/modelo` de `/modelos`) → `Interaccion`. Un modelo no declarado da 422. |
 | `POST /confirmaciones/{id}` | `{"aceptar": true}` ejecuta una acción que quedó pendiente de confirmación. |
 
-Los modelos se eligen por variables de entorno (ver `src/servidor/config.py`): `ASR_MOTOR`
-(`whisper_cpp`, `fake`), `ASR_URL`, `INTERPRETE` (`fake`, `gemini`, `llama_cpp`), `GEMINI_API_KEY`,
-`GEMINI_MODELO`, `LLM_URL`, `LLM_MODELO`, `LLM_TIMEOUT_S`, `CATALOGO`, `UMBRAL_CONFIANZA`,
-`INSTRUMENTO` (`fake`, `visa`) y las `VISA_*` de la sección siguiente. El
-docker-compose usa `llama_cpp`; el modelo local se baja a mano (ver
-[`../modelos/llm/README.md`](../modelos/llm/README.md)). Para desarrollo local van en `servidor/.env`, que
-no se versiona.
+Qué modelos hay se declara en [`src/servidor/proveedores.yaml`](src/servidor/proveedores.yaml)
+(sección siguiente). Las variables de entorno (ver `src/servidor/config.py`) eligen los
+predeterminados, `ASR_MOTOR` e `INTERPRETE`, que se usan cuando el pedido no elige otro. Además
+están `CATALOGO`, `UMBRAL_CONFIANZA`, `INSTRUMENTO` (`fake`, `visa`) y las `VISA_*` de "Conectar
+el osciloscopio real". Las claves van en `servidor/.env`, que no se versiona. El modelo local se
+baja a mano (ver [`../modelos/llm/README.md`](../modelos/llm/README.md)).
+
+## Proveedores y modelos
+
+El front tiene un selector de proveedor y modelo para cada etapa. **El respaldo es manual:** si un
+proveedor se cae o no anda, se elige otro ahí. Hoy hay tres:
+
+| Proveedor | Transcripción | Intérprete | Clave |
+|---|---|---|---|
+| **Local** | whisper-small (whisper.cpp) | Qwen3.5-4B (llama.cpp) | No tiene |
+| **OpenCode Go** (suscripción) | mimo-v2.6 (modelo de chat con audio) | glm-5.3, claude-haiku-5-5, qwen3.8-max, kimi-k3 | `OPENCODE_API_KEY` |
+| **OpenRouter** (crédito prepago) | whisper-large-v3-turbo, gpt-4o-mini-transcribe, voxtral | glm-5.3-flash, gpt-5.4-mini, gemini-3.8-flash, qwen3.8-flash, mistral-small, nemotron (gratis) | `OPENROUTER_API_KEY` |
+
+### Cómo está armado
+
+Hay tres cosas separadas:
+
+- **Protocolo:** cómo se le habla a una API. Es código, con un adaptador por protocolo.
+- **Proveedor:** dónde está la API (URL, clave, cabeceras). Es configuración.
+- **Modelo:** un modelo concreto de un proveedor para una etapa, con sus particularidades. Es configuración.
+
+| Etapa | Protocolo | Adaptador | Lo usan |
+|---|---|---|---|
+| Intérprete | `chat` | [`interpretacion/chat.py`](src/servidor/interpretacion/chat.py) | Local, OpenCode, OpenRouter |
+| Intérprete | `gemini` | [`interpretacion/gemini.py`](src/servidor/interpretacion/gemini.py) | Google directo (oculto en el front) |
+| ASR | `whisper_cpp` | [`transcripcion/whisper_cpp.py`](src/servidor/transcripcion/whisper_cpp.py) | Local |
+| ASR | `chat_audio` | [`transcripcion/chat_audio.py`](src/servidor/transcripcion/chat_audio.py) | OpenCode |
+| ASR | `transcripciones` | [`transcripcion/transcripciones.py`](src/servidor/transcripcion/transcripciones.py) | OpenRouter |
+
+El cliente HTTP común está en [`src/servidor/clientes.py`](src/servidor/clientes.py), y el
+registro que lee el YAML y arma los adaptadores, en
+[`src/servidor/proveedores.py`](src/servidor/proveedores.py). Cada modelo se nombra
+`proveedor/modelo`, por ejemplo `openrouter/z-ai/glm-5.3-flash`. Ese nombre es el que manda el
+front, el que guarda la traza y el que recibe el comparador.
+
+### Qué cambiar según el caso
+
+- **Cambiar o sumar un modelo** de un proveedor que ya está: una línea en `proveedores.yaml`.
+- **Un modelo que necesita un ajuste** (más tiempo de espera, razonamiento apagado, un parámetro
+  que no admite): sus `parametros` en el YAML. Un parámetro en `null` no se manda.
+- **Un proveedor nuevo** que hable un protocolo conocido: un bloque en el YAML y su clave en
+  `servidor/.env`. Casi todos hablan `chat` (la API de OpenAI), y muchos también `transcripciones`.
+- **Un protocolo nuevo:** un adaptador que cumpla `MotorASR` o `Interprete`
+  ([`src/servidor/dominio/puertos.py`](src/servidor/dominio/puertos.py)) y una línea en
+  `PROTOCOLOS_ASR` o `PROTOCOLOS_INTERPRETE` de `proveedores.py`.
+
+En ningún caso cambian la validación, la ejecución ni la API. El YAML no lleva claves, porque el
+repositorio es público: `clave` es el *nombre* de la variable de entorno que la tiene.
+
+### Elegir los predeterminados
+
+```bash
+# Con Docker (desde la raíz). Sin variables: local/whisper-small y local/qwen3.5-4b.
+INTERPRETE=openrouter docker compose up -d servidor   # el predeterminado de OpenRouter
+ASR_MOTOR=opencode-go/mimo-v2.6-flash INTERPRETE=opencode-go/glm-5.3-flash docker compose up -d servidor
+```
+
+`ASR_MOTOR` e `INTERPRETE` aceptan `proveedor/modelo`, solo `proveedor` (su predeterminado) o los
+nombres de antes (`whisper_cpp`, `llama_cpp`, `opencode`, `gemini`, `fake`).
+
+### Particularidades encontradas al probar (2026-11-20)
+
+- **El chat de OpenCode Go y OpenRouter.** Todos los intérpretes reciben el mismo prompt y el mismo
+  esquema como salida estructurada. Si un modelo no admite `response_format`, se reintenta sin él.
+  Si el proveedor responde 400 por otra causa (por ejemplo, una región no habilitada), se sigue
+  usando el esquema.
+- **OpenRouter:**
+  - `require_parameters: true` hace que solo rutee a proveedores que respeten el esquema.
+  - `max_tokens: 4096` evita un 402: sin ese tope, reserva crédito para la salida máxima del
+    modelo, de 65 000 a 131 000 tokens.
+  - A veces responde 200 con el error en el cuerpo, y el cliente lo trata como error.
+  - `gpt-5.4-mini` no admite `temperature`.
+  - `glm` y `gemini` razonan siempre, así que se les pide el menor esfuerzo.
+  - La transcripción exige al menos US$ 0,50 de saldo. Con saldo, `whisper-large-v3-turbo`
+    transcribe en unos 2 s y es fiel con un pedido cortado. `gpt-4o-mini-transcribe`, en cambio,
+    completó un número que no se dijo.
+- **whisper local** escribe una anotación con silencio o ruido ("[MÚSICA]", "[Sonido de la
+  ventana]"). El adaptador borra lo que va entre corchetes, paréntesis o asteriscos, así el silencio
+  da texto vacío.
+- **El ASR de OpenCode Go** es un modelo de lenguaje y no whisper:
+  - **Con silencio o ruido inventaba un pedido completo.** Las instrucciones le dan una salida
+    explícita (`[inaudible]`), que se convierte en texto vacío, y el pipeline rechaza una
+    transcripción vacía sin llamar al intérprete.
+  - Con el razonamiento prendido, mimo deja la respuesta vacía.
+  - `gemini-4-argon` no anda por esta API.
+- **Disponibilidad.** Un modelo está disponible si tiene su clave y figura en el listado del
+  proveedor, o si responde su `salud_url` (llama.cpp). No se prueba la clave ni el saldo: eso
+  costaría un pedido. Una clave inválida o la falta de saldo aparecen en el primer pedido, como un
+  503 que dice qué etapa falló.
+- **Uso de OpenCode Go.** Go está pensado para agentes de programación. Algunos modelos piden
+  habilitar regiones en la consola (DeepSeek: "Global"). Los `*-contributor` entrenan con los
+  datos enviados: no usarlos con grabaciones reales.
+- **Privacidad.** Con un proveedor en la nube, el audio y el texto salen del laboratorio.
+
+### Comparar modelos
+
+El comparador corre las nueve frases del guion de prueba contra cada modelo, cuenta aciertos y
+mide la latencia. Son nueve pedidos por modelo:
+
+```bash
+python -m servidor.herramientas.comparar_modelos opencode-go/glm-5.3-flash openrouter/z-ai/glm-5.3-flash
+python -m servidor.herramientas.comparar_modelos openrouter            # todos los intérpretes de OpenRouter
+python -m servidor.herramientas.comparar_modelos "openrouter/+qwen/qwen3.8-27b"   # uno sin declarar, para evaluarlo
+python -m servidor.herramientas.comparar_modelos --asr local opencode-go openrouter --audio ../modelos/audio_ejemplos/*.wav
+```
+
+Las pruebas de contrato recorren todos los modelos declarados: `pytest -m integracion`, o uno
+solo con `-k "openrouter/z-ai"`. Un modelo sin clave o que no responde se saltea.
 
 ## Conectar el osciloscopio real
 
@@ -130,9 +237,5 @@ INSTRUMENTO=visa VISA_BACKEND="$PWD/src/servidor/simuladores/tektronix_tbs1072b.
 
 ## Cómo agregar un modelo
 
-1. Un archivo en `transcripcion/` o `interpretacion/` con una clase que cumpla `MotorASR` o
-   `Interprete` ([`src/servidor/dominio/puertos.py`](src/servidor/dominio/puertos.py)).
-2. Una línea en `MOTORES_ASR` o `INTERPRETES` de [`src/servidor/registro.py`](src/servidor/registro.py).
-3. Agregarlo a `IMPLEMENTACIONES` del test de contrato correspondiente en `tests/contrato/` y que pase.
-
-Nada más cambia: ni la validación, ni la ejecución, ni la API.
+Ver "Qué cambiar según el caso" en la sección "Proveedores y modelos". Un modelo declarado entra
+solo en los tests de contrato (`tests/contrato/`), y tiene que pasarlos con `pytest -m integracion`.

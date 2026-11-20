@@ -1,0 +1,109 @@
+# Proveedores de modelos: dónde está cada API y qué modelos se ofrecen en el front.
+#
+# El repositorio es público: acá NO van claves. `clave` es el NOMBRE de la variable de entorno
+# (en servidor/.env) que la tiene. Un proveedor sin su clave aparece como no disponible.
+#
+# Cada modelo se identifica como `proveedor/modelo` (ej. `opencode-go/glm-5.3-flash`). La clave
+# del modelo es el nombre que se le manda a la API.
+#
+# Campos de un proveedor:
+#   nombre, ubicacion (local | nube), url, clave, cabeceras, cabecera_sesion, timeout_s,
+#   modelos_url (disponible = el modelo figura en ese listado) o salud_url (disponible = responde 200),
+#   esquema_estricto (strict: true en la salida estructurada), parametros (por etapa: asr, interprete),
+#   predeterminados (por etapa), oculto (no se muestra en el front), modelos.
+# Campos de un modelo: etapa (asr | interprete), protocolo y, para pisar los del proveedor:
+#   url, salud_url, timeout_s, parametros, esquema_estricto.
+#
+# Protocolos: interprete → chat, gemini, fake · asr → whisper_cpp, chat_audio, transcripciones, fake.
+# ${VAR:-valor} toma la variable de entorno, o el valor si no está: ASR_URL y LLM_URL cambian entre
+# Docker (http://whisper:8080, http://llm:8080) y la máquina (localhost).
+
+proveedores:
+  local:
+    nombre: Local (laboratorio)
+    ubicacion: local
+    predeterminados: {asr: whisper-small, interprete: qwen3.5-4b}
+    modelos:
+      whisper-small:
+        etapa: asr
+        protocolo: whisper_cpp
+        url: ${ASR_URL:-http://localhost:8080}
+        timeout_s: 60
+      qwen3.5-4b:
+        etapa: interprete
+        protocolo: chat
+        url: ${LLM_URL:-http://localhost:8081}/v1
+        salud_url: ${LLM_URL:-http://localhost:8081}/health  # 503 mientras carga el modelo
+        timeout_s: 60  # el primer pedido procesa el prompt entero y en CPU tarda
+
+  opencode-go:
+    nombre: OpenCode Go
+    url: https://opencode.ai/inference/go/openai/v1
+    modelos_url: https://opencode.ai/inference/go/v1/models
+    clave: OPENCODE_API_KEY
+    cabecera_sesion: x-opencode-session  # lo pide Go: sin ella, una aplicación no puede usar sus modelos
+    timeout_s: 30
+    predeterminados: {asr: mimo-v2.6-flash, interprete: glm-5.3-flash}
+    modelos:
+      # Comparación del 2026-11-20 (BITACORA.md): 9/9 aciertos todos; mediana de latencia al lado.
+      glm-5.3-flash:    {etapa: interprete, protocolo: chat}  # 3,4 s
+      claude-haiku-5-5: {etapa: interprete, protocolo: chat}  # 3,4 s
+      glm-5.3:          {etapa: interprete, protocolo: chat}  # 7,9 s
+      qwen3.8-max:      {etapa: interprete, protocolo: chat}  # 9,4 s
+      kimi-k3:          {etapa: interprete, protocolo: chat, timeout_s: 60}  # 13,9 s, máximo 38,8 s
+      # Con el razonamiento prendido, mimo deja la respuesta vacía.
+      mimo-v2.6-flash:  {etapa: asr, protocolo: chat_audio, parametros: {reasoning_effort: none}}
+      mimo-v2.6-pro:    {etapa: asr, protocolo: chat_audio, parametros: {reasoning_effort: none}}
+
+  openrouter:
+    nombre: OpenRouter
+    url: https://openrouter.ai/api/v1
+    # output_modalities=all: sin él, el listado no incluye los modelos de transcripción.
+    modelos_url: https://openrouter.ai/api/v1/models?output_modalities=all
+    clave: OPENROUTER_API_KEY
+    cabeceras: {X-OpenRouter-Title: instrumentacion-lenguaje-natural}
+    timeout_s: 30
+    esquema_estricto: true
+    parametros:
+      # Solo proveedores que admiten todos los parámetros del pedido (la salida estructurada,
+      # sobre todo): sin esto, OpenRouter puede rutear a uno que ignore el esquema.
+      # max_tokens: sin él, OpenRouter reserva crédito para la salida máxima del modelo (65 000 a
+      # 131 000 tokens) y responde 402 aunque alcance para el pedido. Una intención son ~100 tokens;
+      # el resto es margen para los modelos que razonan sí o sí (glm, gemini).
+      interprete: {provider: {require_parameters: true}, max_tokens: 4096}
+    predeterminados: {asr: openai/whisper-large-v3-turbo, interprete: z-ai/glm-5.3-flash}
+    modelos:
+      # Probados el 2026-11-20 (BITACORA.md). Los tres transcriben bien el ejemplo en unos 2 s y
+      # devuelven texto vacío con silencio o ruido.
+      openai/whisper-large-v3-turbo:        {etapa: asr, protocolo: transcripciones}  # fiel con un pedido cortado
+      # Con un pedido cortado, completó un número que no se dijo ("a quince").
+      openai/gpt-4o-mini-transcribe:        {etapa: asr, protocolo: transcripciones}
+      # Respondió 429 (proveedor saturado) en 2 de 6 pedidos.
+      mistralai/voxtral-mini-transcribe-3-0: {etapa: asr, protocolo: transcripciones}
+      # Un parámetro en null no se manda. `reasoning`: los que razonan siempre, con el menor esfuerzo.
+      z-ai/glm-5.3-flash:          {etapa: interprete, protocolo: chat, parametros: {reasoning: {effort: low}}}
+      openai/gpt-5.4-mini:         {etapa: interprete, protocolo: chat, parametros: {temperature: null, reasoning: {effort: none}}}
+      google/gemini-3.8-flash:     {etapa: interprete, protocolo: chat, parametros: {reasoning: {effort: low}}}
+      qwen/qwen3.8-flash:          {etapa: interprete, protocolo: chat}
+      mistralai/mistral-small-2603: {etapa: interprete, protocolo: chat}
+      # Gratis, sin crédito: unos 50 pedidos por día en total. 9/9 en el comparador (2026-11-20).
+      nvidia/nemotron-3.5-super-vl:free: {etapa: interprete, protocolo: chat}
+
+  # Gemini directo (Google AI Studio). Oculto en el front; queda por compatibilidad (INTERPRETE=gemini).
+  google:
+    nombre: Google AI Studio
+    clave: GEMINI_API_KEY
+    oculto: true
+    predeterminados: {interprete: gemini-3.8-flash}
+    modelos:
+      gemini-3.8-flash: {etapa: interprete, protocolo: gemini}
+
+  # Para los tests y para probar sin modelos. No se muestra en el front.
+  prueba:
+    nombre: Prueba (guion fijo)
+    ubicacion: local
+    oculto: true
+    predeterminados: {asr: fake-asr, interprete: fake}
+    modelos:
+      fake-asr: {etapa: asr, protocolo: fake}
+      fake: {etapa: interprete, protocolo: fake}

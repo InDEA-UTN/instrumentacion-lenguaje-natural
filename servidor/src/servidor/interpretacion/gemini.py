@@ -15,12 +15,12 @@ _API = "https://generativelanguage.googleapis.com/v1beta"
 
 class Gemini:
     def __init__(self, api_key: str | None, modelo: str = "gemini-3.8-flash", timeout_s: float = 15.0,
-                 reintentos: int = 1):
+                 reintentos: int = 1, info: ModeloInfo | None = None):
         self._api_key = api_key
         self._modelo = modelo
         self._timeout = timeout_s
         self._reintentos = reintentos
-        self._info = ModeloInfo(nombre=modelo, proveedor="google", version=modelo, ubicacion="nube")
+        self._info = info or ModeloInfo(nombre=modelo, proveedor="google", version=modelo, ubicacion="nube")
 
     def info(self) -> ModeloInfo:
         return self._info

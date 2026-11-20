@@ -28,7 +28,9 @@ cuando está listo).
 ## Probar otro modelo
 
 1. Bajar el `.gguf` a esta carpeta.
-2. Cambiar `-m` en el servicio `llm` de [`../../docker-compose.yml`](../../docker-compose.yml) y
-   `LLM_MODELO` del servicio `servidor` (solo identifica el modelo en las respuestas y en la bitácora).
-3. `docker compose up -d llm servidor` y correr `pytest -m integracion tests/contrato/test_interprete.py`
-   desde `servidor/`.
+2. Cambiar `-m` en el servicio `llm` de [`../../docker-compose.yml`](../../docker-compose.yml), y
+   el nombre del modelo del proveedor `local` en
+   [`../../servidor/src/servidor/proveedores.yaml`](../../servidor/src/servidor/proveedores.yaml).
+   Ese nombre solo identifica el modelo en el selector, las respuestas y la bitácora.
+3. `docker compose up -d --build llm servidor` y correr
+   `pytest -m integracion tests/contrato/test_interprete.py -k local` desde `servidor/`.

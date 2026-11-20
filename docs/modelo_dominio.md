@@ -137,23 +137,41 @@ Reglas para quien escriba un adaptador:
 
 ## 4. Cómo se intercambian
 
-```
-variables de entorno ──► registro.py ──► ProcesarPedido(asr, interprete, catalogo, ejecutor)
-ASR_MOTOR=whisper_cpp     MOTORES_ASR = {"whisper_cpp": ..., "fake": ...}
-INTERPRETE=fake           INTERPRETES = {"fake": ...}
-```
+Hay tres conceptos separados:
 
-Agregar un modelo es **un archivo adaptador y una línea en el registro**. Que el adaptador sea
-realmente intercambiable lo garantizan los **tests de contrato**
-([`../servidor/tests/contrato/`](../servidor/tests/contrato/)): la misma batería, parametrizada
-sobre todas las implementaciones del puerto. Un adaptador nuevo se agrega a la lista y tiene que
-pasarla.
-
-| Puerto | Implementaciones hoy | Previstas |
+| Concepto | Qué es | Dónde vive |
 |---|---|---|
-| `MotorASR` | `whisper_cpp`, `fake` | servicio en la nube (D2) |
-| `Interprete` | `gemini` (Gemini Flash, salida estructurada), `fake` (guion fijo) | modelo abierto ajustado (fase 3) |
-| `ConexionInstrumento` | `InstrumentoFake` | `pyvisa-sim`, PyVISA real (D1) |
+| **Protocolo** | Cómo se le habla a una API | Código: un adaptador por protocolo |
+| **Proveedor** | Dónde está la API: URL, clave (el nombre de su variable de entorno), cabeceras | [`proveedores.yaml`](../servidor/src/servidor/proveedores.yaml) |
+| **Modelo** | Un modelo de un proveedor, para una etapa, con sus particularidades | [`proveedores.yaml`](../servidor/src/servidor/proveedores.yaml) |
+
+```
+proveedores.yaml ──► RegistroModelos ──► adaptador del protocolo ──► puerto MotorASR / Interprete
+  openrouter:          "openrouter/z-ai/glm-5.3-flash"    Chat(cliente, modelo, parámetros)
+    url, clave         → protocolo chat
+    modelos: ...
+```
+
+Cada modelo se identifica como `proveedor/modelo`. Los predeterminados salen de las variables
+`ASR_MOTOR` e `INTERPRETE`. Cada pedido puede elegir otros: el front tiene un selector de
+proveedor y modelo por etapa, y el respaldo ante una caída es manual. El orquestador recibe los
+modelos por sus puertos y no sabe cuál está detrás.
+
+| Puerto | Protocolos hoy | Proveedores que los usan |
+|---|---|---|
+| `Interprete` | `chat` (API de OpenAI), `gemini`, `fake` (guion fijo) | Local (llama.cpp), OpenCode Go, OpenRouter; Google |
+| `MotorASR` | `whisper_cpp`, `chat_audio` (modelo de chat con audio), `transcripciones` (`/audio/transcriptions`), `fake` | Local; OpenCode Go; OpenRouter |
+| `ConexionInstrumento` | `InstrumentoFake`, PyVISA (`ConexionVisa`, también contra pyvisa-sim) | — |
+
+Qué hace falta en cada caso:
+- **Cambiar o sumar un modelo:** una línea del YAML.
+- **Sumar un proveedor que hable un protocolo conocido:** un bloque del YAML y su clave.
+- **Sumar un protocolo:** un adaptador nuevo y una línea en el registro
+  ([`proveedores.py`](../servidor/src/servidor/proveedores.py)). Es el único caso que lleva código.
+
+Que un adaptador sea realmente intercambiable lo garantizan los **tests de contrato**
+([`../servidor/tests/contrato/`](../servidor/tests/contrato/)). Son la misma batería, parametrizada
+sobre todos los modelos declarados en el YAML.
 
 El modelo multimodal de la fase 4 entra como un tercer puerto, `audio → Intencion`, que el
 orquestador usa en lugar del par ASR + intérprete. Validación y ejecución no se enteran.

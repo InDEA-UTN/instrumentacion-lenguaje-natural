@@ -1,3 +1,4 @@
+import re
 import time
 
 import httpx
@@ -5,15 +6,25 @@ import httpx
 from ..dominio.errores import ModeloNoDisponible, RespuestaInvalida
 from ..dominio.modelos import Grabacion, ModeloInfo, Transcripcion
 
+# Con silencio o ruido, whisper escribe una anotación en lugar de nada: "[MÚSICA]", "(ruido)",
+# "[Sonido de la ventana]" (probado el 2026-11-20). Se borran, para que el silencio dé texto vacío
+# y el pipeline lo rechace sin llamar al intérprete. Un pedido real no lleva corchetes ni paréntesis.
+_ANOTACION = re.compile(r"\[[^\]]*\]|\([^)]*\)|\*[^*]*\*")
+
+
+def limpiar(texto: str) -> str:
+    return re.sub(r"\s+", " ", _ANOTACION.sub(" ", texto)).strip()
+
 
 class WhisperCpp:
     """whisper-server de whisper.cpp (servicio `whisper` de docker-compose.yml)."""
 
-    def __init__(self, url: str, modelo: str = "ggml-small", idioma: str = "es", timeout_s: float = 60.0):
+    def __init__(self, url: str, modelo: str = "ggml-small", idioma: str = "es", timeout_s: float = 60.0,
+                 info: ModeloInfo | None = None):
         self._url = url.rstrip("/")
         self._idioma = idioma
         self._timeout = timeout_s
-        self._info = ModeloInfo(
+        self._info = info or ModeloInfo(
             nombre=f"whisper.cpp-{modelo}", proveedor="ggml-org", version=modelo, ubicacion="local"
         )
 
@@ -45,7 +56,7 @@ class WhisperCpp:
         except (ValueError, KeyError) as e:
             raise RespuestaInvalida(f"whisper.cpp respondió sin campo 'text': {r.text[:200]}") from e
         return Transcripcion(
-            texto=texto.strip(),
+            texto=limpiar(texto),
             idioma=self._idioma,
             latencia_s=time.perf_counter() - inicio,
             modelo=self._info,

@@ -1,30 +1,27 @@
 """Contrato del puerto MotorASR. Todo motor nuevo se agrega a IMPLEMENTACIONES y tiene que pasarlo."""
 
-import os
 from pathlib import Path
 
 import pytest
 
+from servidor.config import Configuracion
 from servidor.dominio.modelos import Grabacion, ModeloInfo, Transcripcion
 from servidor.dominio.puertos import MotorASR
-from servidor.transcripcion.fake import ASRFake
-from servidor.transcripcion.whisper_cpp import WhisperCpp
+from servidor.proveedores import RegistroModelos
 
 AUDIO_EJEMPLOS = Path(__file__).resolve().parents[3] / "modelos" / "audio_ejemplos"
 
+# Todos los motores declarados en proveedores.yaml (ver test_interprete.py).
+_REGISTRO = RegistroModelos(Configuracion().proveedores)
 IMPLEMENTACIONES = [
-    pytest.param(lambda: ASRFake(), id="fake"),
-    pytest.param(
-        lambda: WhisperCpp(url=os.environ.get("ASR_URL", "http://localhost:8080")),
-        id="whisper_cpp",
-        marks=pytest.mark.integracion,
-    ),
+    pytest.param(id_, id=id_, marks=() if id_.startswith("prueba/") else pytest.mark.integracion)
+    for id_ in _REGISTRO.ids("asr", visibles=False)
 ]
 
 
 @pytest.fixture(params=IMPLEMENTACIONES)
 async def motor(request) -> MotorASR:
-    motor = request.param()
+    motor = _REGISTRO.asr(request.param)
     if not await motor.salud():
         pytest.skip(f"{motor.info().nombre} no está disponible")
     return motor

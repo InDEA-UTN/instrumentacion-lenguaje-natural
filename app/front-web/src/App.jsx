@@ -1,10 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { concatFloat32, encodeWav } from './wav.js'
-import { SERVIDOR_URL, enviarPedido, salud as consultarSalud } from './api.js'
+import { SERVIDOR_URL, enviarPedido, modelos as consultarModelos, salud as consultarSalud } from './api.js'
 import Resultado from './Resultado.jsx'
+import Selectores, { proveedorDe } from './Selectores.jsx'
 
 // Por debajo de esto fue un toque, no un pedido: no vale la pena mandarlo al servidor.
 const DURACION_MINIMA_MS = 300
+
+const CLAVE_SELECCION = 'seleccion-modelos'
+
+// La elección se recuerda en el navegador. Si el servidor ya no ofrece un modelo guardado (se sacó
+// de proveedores.yaml), esa etapa vuelve al predeterminado.
+function seleccionInicial(catalogo) {
+  let guardada = {}
+  try {
+    guardada = JSON.parse(localStorage.getItem(CLAVE_SELECCION)) ?? {}
+  } catch {
+    // sin almacenamiento (ventana privada): se usa el predeterminado
+  }
+  const seleccion = {}
+  for (const etapa of ['asr', 'interprete']) {
+    const valida = guardada[etapa] && proveedorDe(catalogo, etapa, guardada[etapa])
+    seleccion[etapa] = valida ? guardada[etapa] : catalogo[etapa].predeterminado
+  }
+  return seleccion
+}
 
 function nuevaSesion() {
   // randomUUID solo existe en contexto seguro (https o localhost).
@@ -20,14 +40,9 @@ function LineaSalud({ salud }) {
       </p>
     )
   }
-  const modelo = (m) => (
-    <span className={m.listo ? 'ok' : 'mal'}>
-      {m.nombre} {m.listo ? '✓' : '✗ no responde'}
-    </span>
-  )
   return (
     <p className="salud">
-      ASR: {modelo(salud.asr)} · Intérprete: {modelo(salud.interprete)} · Instrumento:{' '}
+      Instrumento:{' '}
       <span className={salud.instrumento.listo ? 'ok' : 'mal'}>
         {salud.instrumento.modelo}{' '}
         {salud.instrumento.conexion === 'InstrumentoFake'
@@ -48,6 +63,9 @@ export default function App() {
   const [segundos, setSegundos] = useState(0)
   const [sesion, setSesion] = useState(nuevaSesion)
   const [estadoSalud, setEstadoSalud] = useState(null)
+  const [catalogoModelos, setCatalogoModelos] = useState(null)
+  const [seleccion, setSeleccion] = useState({})
+  const [actualizandoModelos, setActualizandoModelos] = useState(false)
 
   const audioContextRef = useRef(null)
   const streamRef = useRef(null)
@@ -59,6 +77,8 @@ export default function App() {
   const ocupadoRef = useRef(false) // abriendo el micrófono, grabando o esperando al servidor
   const sesionRef = useRef(sesion)
   sesionRef.current = sesion
+  const seleccionRef = useRef(seleccion)
+  seleccionRef.current = seleccion
 
   const actualizarSalud = useCallback(async () => {
     try {
@@ -68,9 +88,35 @@ export default function App() {
     }
   }, [])
 
+  const actualizarModelos = useCallback(async (refrescar = false) => {
+    setActualizandoModelos(true)
+    try {
+      const catalogo = await consultarModelos(refrescar)
+      setCatalogoModelos(catalogo)
+      setSeleccion((actual) => (actual.asr ? actual : seleccionInicial(catalogo)))
+    } catch (err) {
+      setCatalogoModelos((actual) => actual ?? { error: err.message })
+    } finally {
+      setActualizandoModelos(false)
+    }
+  }, [])
+
   useEffect(() => {
     actualizarSalud()
-  }, [actualizarSalud])
+    actualizarModelos()
+  }, [actualizarSalud, actualizarModelos])
+
+  const cambiarModelo = (etapa, id) => {
+    setSeleccion((actual) => {
+      const nueva = { ...actual, [etapa]: id }
+      try {
+        localStorage.setItem(CLAVE_SELECCION, JSON.stringify(nueva))
+      } catch {
+        // sin almacenamiento: la elección vale hasta recargar
+      }
+      return nueva
+    })
+  }
 
   // Contador visible mientras se espera: con el modelo local en CPU el pedido tarda varios segundos.
   useEffect(() => {
@@ -86,12 +132,18 @@ export default function App() {
     const t0 = performance.now()
     try {
       const wavBlob = encodeWav(samples, sampleRate)
-      setInteraccion(await enviarPedido(wavBlob, sesionRef.current))
+      setInteraccion(await enviarPedido(wavBlob, sesionRef.current, seleccionRef.current))
       setTotalS((performance.now() - t0) / 1000)
     } catch (err) {
       setInteraccion(null)
-      setError('No se pudo procesar el pedido: ' + err.message)
+      // El servidor dice qué etapa falló ("Transcripción (opencode-go): ..."): el respaldo es manual.
+      const caido = /^(Transcripción|Intérprete) \(/.test(err.message)
+      setError(
+        'No se pudo procesar el pedido: ' + err.message +
+          (caido ? ' Probá con otro proveedor o modelo en el selector.' : ''),
+      )
       actualizarSalud()
+      actualizarModelos(true)
     } finally {
       setEstado('idle')
       ocupadoRef.current = false
@@ -215,6 +267,14 @@ export default function App() {
     <>
       <h1>Prueba del sistema</h1>
       <LineaSalud salud={estadoSalud} />
+      <Selectores
+        catalogo={catalogoModelos}
+        seleccion={seleccion}
+        onCambiar={cambiarModelo}
+        onActualizar={() => actualizarModelos(true)}
+        actualizando={actualizandoModelos}
+        deshabilitado={grabando || procesando}
+      />
 
       <button
         className={`grabar${grabando ? ' presionado' : ''}`}

@@ -74,6 +74,35 @@
       .salud-mal {
         color: #b00020;
       }
+      .selectores {
+        margin: 1rem 0 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        align-items: center;
+      }
+      .selector {
+        display: grid;
+        grid-template-columns: 6.5rem minmax(0, 1fr) minmax(0, 1.4fr);
+        gap: 0.4rem;
+        align-items: center;
+        width: 100%;
+        text-align: left;
+        font-size: 0.9rem;
+      }
+      .selector select {
+        font-size: 0.9rem;
+        padding: 0.3rem;
+        min-width: 0;
+      }
+      .selector-etapa {
+        color: #444;
+      }
+      .selector-motivo {
+        grid-column: 2 / 4;
+        color: #b00020;
+        font-size: 0.8rem;
+      }
       .sesion {
         margin-top: 2rem;
         font-size: 0.85rem;
