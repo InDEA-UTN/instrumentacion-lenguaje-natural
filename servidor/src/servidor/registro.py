@@ -1,43 +1,44 @@
-"""Registro de modelos disponibles. Agregar un modelo = un adaptador nuevo + una línea acá."""
+"""Arma el pipeline: modelos predeterminados (proveedores.py), catálogo e instrumento.
+
+Qué modelos hay se declara en proveedores.yaml; acá solo se eligen los predeterminados y la
+conexión con el instrumento.
+"""
 
 from collections.abc import Callable
 
 from .catalogo import cargar_catalogo
 from .config import Configuracion
-from .dominio.puertos import Interprete, MotorASR
-from .ejecucion import Ejecutor, InstrumentoFake
-from .interpretacion.fake import InterpreteFake
-from .interpretacion.gemini import Gemini
-from .interpretacion.llama_cpp import LlamaCpp
+from .dominio.modelos import CatalogoInstrumento
+from .dominio.puertos import ConexionInstrumento
+from .ejecucion import ConexionVisa, Ejecutor, InstrumentoFake
 from .pipeline import ProcesarPedido
-from .transcripcion.fake import ASRFake
-from .transcripcion.whisper_cpp import WhisperCpp
+from .proveedores import RegistroModelos
 
-MOTORES_ASR: dict[str, Callable[[Configuracion], MotorASR]] = {
-    "whisper_cpp": lambda c: WhisperCpp(url=c.asr_url, modelo=c.asr_modelo),
-    "fake": lambda c: ASRFake(texto=c.asr_fake_texto),
+CONEXIONES: dict[str, Callable[[Configuracion, CatalogoInstrumento], ConexionInstrumento]] = {
+    "fake": lambda c, cat: InstrumentoFake(),
+    "visa": lambda c, cat: ConexionVisa(
+        modelo=cat.instrumento.modelo,
+        recurso=c.visa_recurso or cat.instrumento.recurso_visa,
+        backend=c.visa_backend,
+        timeout_ms=c.visa_timeout_ms,
+        al_conectar=c.visa_al_conectar,
+        consulta_eventos=c.visa_consulta_eventos,
+    ),
 }
 
-INTERPRETES: dict[str, Callable[[Configuracion], Interprete]] = {
-    "fake": lambda c: InterpreteFake(),
-    "gemini": lambda c: Gemini(api_key=c.gemini_api_key, modelo=c.gemini_modelo),
-    "llama_cpp": lambda c: LlamaCpp(url=c.llm_url, modelo=c.llm_modelo, timeout_s=c.llm_timeout_s),
-}
 
-
-def _elegir[T](registro: dict[str, Callable[[Configuracion], T]], nombre: str, que: str, c: Configuracion) -> T:
-    try:
-        return registro[nombre](c)
-    except KeyError:
-        raise ValueError(f"{que} '{nombre}' desconocido. Disponibles: {', '.join(registro)}") from None
-
-
-def construir_pipeline(c: Configuracion | None = None) -> ProcesarPedido:
+def construir_pipeline(c: Configuracion | None = None, registro: RegistroModelos | None = None) -> ProcesarPedido:
     c = c or Configuracion()
+    registro = registro or RegistroModelos(c.proveedores)
+    catalogo = cargar_catalogo(c.catalogo)
+    try:
+        conexion = CONEXIONES[c.instrumento](c, catalogo)
+    except KeyError:
+        raise ValueError(f"Instrumento '{c.instrumento}' desconocido. Disponibles: {', '.join(CONEXIONES)}") from None
     return ProcesarPedido(
-        asr=_elegir(MOTORES_ASR, c.asr_motor, "Motor de ASR", c),
-        interprete=_elegir(INTERPRETES, c.interprete, "Intérprete", c),
-        catalogo=cargar_catalogo(c.catalogo),
-        ejecutor=Ejecutor(InstrumentoFake()),  # PyVISA real cuando se cierre D1
+        asr=registro.asr(c.asr_motor),
+        interprete=registro.interprete(c.interprete),
+        catalogo=catalogo,
+        ejecutor=Ejecutor(conexion),
         umbral_confianza=c.umbral_confianza,
     )

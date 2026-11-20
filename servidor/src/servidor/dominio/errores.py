@@ -16,3 +16,11 @@ class CatalogoInvalido(ErrorDominio):
 
 class InteraccionInexistente(ErrorDominio):
     pass
+
+
+class InstrumentoNoDisponible(ErrorDominio):
+    """No hay comunicación con el instrumento: desenchufado, apagado, otro modelo o timeout."""
+
+
+class RechazoDelInstrumento(ErrorDominio):
+    """El instrumento recibió el comando y lo rechazó, o no pudo dar el dato pedido."""

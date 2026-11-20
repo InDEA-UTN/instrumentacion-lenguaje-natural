@@ -124,3 +124,17 @@ async def test_pendiente_no_cambia_el_contexto_y_cancelar_cierra_la_aclaracion(c
     despues = actualizar_contexto(con_aclaracion, cancelada)
     assert despues.aclaracion_pendiente is None
     assert despues.ultima_intencion == previo.ultima_intencion
+
+
+@pytest.mark.parametrize("texto", ["", "   "])
+async def test_transcripcion_vacia_no_llega_al_interprete(catalogo, instrumento, texto):
+    class InterpreteQueNoDebeLlamarse(InterpreteFake):
+        async def interpretar(self, *a):
+            raise AssertionError("no debería interpretar un audio sin texto")
+
+    p = _pipeline(catalogo, instrumento, texto, interprete=InterpreteQueNoDebeLlamarse())
+    contexto = Contexto(canal_activo=2)
+    i = await p.procesar(AUDIO, contexto)
+    assert i.estado == EstadoInteraccion.RECHAZADA and i.intencion is None
+    assert instrumento.historial == []
+    assert actualizar_contexto(contexto, i) == contexto

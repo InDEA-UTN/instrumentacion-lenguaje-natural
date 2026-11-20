@@ -17,10 +17,13 @@ async function leer(respuesta) {
   throw new Error(detalle)
 }
 
-export async function enviarPedido(wavBlob, sesion) {
+// seleccion: {asr, interprete} con identificadores `proveedor/modelo` de GET /modelos.
+export async function enviarPedido(wavBlob, sesion, seleccion = {}) {
   const formData = new FormData()
   formData.append('audio', wavBlob, 'audio.wav')
   formData.append('sesion', sesion)
+  if (seleccion.asr) formData.append('asr', seleccion.asr)
+  if (seleccion.interprete) formData.append('interprete', seleccion.interprete)
   return leer(await fetch(`${SERVIDOR_URL}/pedidos`, { method: 'POST', body: formData }))
 }
 
@@ -36,4 +39,13 @@ export async function confirmar(id, aceptar) {
 
 export async function salud() {
   return leer(await fetch(`${SERVIDOR_URL}/salud`))
+}
+
+// Solo el instrumento: le pregunta *IDN? al equipo en el momento. Es lo que se consulta seguido.
+export async function saludInstrumento() {
+  return leer(await fetch(`${SERVIDOR_URL}/salud/instrumento`))
+}
+
+export async function modelos(refrescar = false) {
+  return leer(await fetch(`${SERVIDOR_URL}/modelos${refrescar ? '?refrescar=true' : ''}`))
 }

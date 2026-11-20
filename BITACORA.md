@@ -33,6 +33,213 @@ pasos. Es la memoria del proyecto y el insumo del informe final.
 
 ---
 
+## 2026-11-20 — El front muestra en vivo si el osciloscopio está conectado
+- **Fase:** 1 · **Estado:** 🟨 En curso (falta probarlo con el equipo enchufado)
+- **Objetivo:** saber desde el front, sin recargar, si el equipo está conectado y cuál es.
+- **Actividad:**
+  - `GET /salud/instrumento`: le pregunta `*IDN?` al equipo en el momento y, si respondió,
+    devuelve la respuesta y la cadena VISA. Va aparte de `/salud`, que además consulta a los
+    proveedores de modelos: consultarlo seguido le pegaría a sus listados en la nube.
+  - Si el equipo deja de responder, la identidad no se informa: no queda la del último.
+  - Front: consulta cada 5 s, salvo durante un pedido o con la pestaña oculta, y nunca apila
+    consultas. Botón "Revisar" para hacerlo en el momento.
+  - Con el equipo dice "✓ conectado", con el número de serie y el firmware; al pasar el mouse,
+    la respuesta completa a `*IDN?` y la cadena VISA, que hay que anotar en la ficha.
+- **Resultado:**
+  - Pasan 147 tests sin servicios externos (eran 145). Uno usa el simulador para probar que se
+    informa la identidad y que deja de informarse al perder el equipo.
+  - En Docker con `INSTRUMENTO=visa` y sin equipo, cada consulta tarda unos 1 s y responde "no
+    conectado".
+- **Documentado en:** [`servidor/README.md`](servidor/README.md) y
+  [`app/front-web/README.md`](app/front-web/README.md).
+- **Próximo paso:** enchufar el TBS1072B y anotar en la ficha lo que muestra el front.
+
+## 2026-11-20 — Proveedores intercambiables, selector en el front y OpenRouter como respaldo
+- **Fase:** 1 (insumo para D3 y la etapa 4) · **Estado:** ✅ Funciona de punta a punta, incluida la transcripción de OpenRouter
+- **Objetivo:**
+  - Elegir desde el front el proveedor y el modelo de cada etapa, con respaldo manual si uno se
+    cae.
+  - Sumar modelos o proveedores sin tocar código.
+- **Actividad:**
+  - **Protocolo, proveedor y modelo separados.** Los adaptadores son por protocolo:
+    - `chat`: une los de llama.cpp y OpenCode, que eran casi el mismo código;
+    - `chat_audio`;
+    - `transcripciones`: nuevo, la API `/audio/transcriptions`;
+    - `whisper_cpp` y `gemini`, que quedan igual.
+
+    Proveedores y modelos se declaran en `servidor/src/servidor/proveedores.yaml`, sin claves: el
+    YAML nombra la variable de entorno de cada una.
+  - **Registro de modelos** (`proveedores.py`):
+    - arma cada adaptador cuando se pide;
+    - nombra los modelos `proveedor/modelo`;
+    - acepta los nombres de antes (`whisper_cpp`, `llama_cpp`, `opencode`, `gemini`, `fake`);
+    - informa la disponibilidad de cada modelo con el motivo ("Falta OPENROUTER_API_KEY").
+  - **API:**
+    - `GET /modelos`, por etapa y proveedor;
+    - `POST /pedidos` acepta `asr` e `interprete`, solo con modelos declarados (si no, 422);
+    - un 503 dice qué etapa falló.
+  - **Front:** selector de proveedor y modelo por etapa. La elección se recuerda en el navegador y
+    viaja con cada pedido. Si un pedido falla, sugiere cambiar de proveedor.
+  - **OpenRouter** como tercer proveedor: transcripción por `/audio/transcriptions` (whisper,
+    gpt-4o-mini-transcribe, voxtral) e intérprete por chat completions.
+  - Los tests de contrato y el comparador recorren cualquier modelo declarado. El comparador
+    también prueba modelos sin declarar, para evaluarlos antes de sumarlos al YAML.
+- **Resultado del intérprete de OpenRouter** (9 frases del guion; la cuenta todavía sin saldo):
+
+  | Modelo | Aciertos | Mediana | Máximo |
+  |---|---|---|---|
+  | `z-ai/glm-5.3-flash` | 9/9 | 2,0 s | 3,2 s |
+  | `openai/gpt-5.4-mini` | 9/9 | 1,9 s | 4,3 s |
+  | `mistralai/mistral-small-2603` | 9/9 | 2,0 s | 3,0 s |
+  | `google/gemini-3.8-flash` | 9/9 | 3,6 s | 4,2 s |
+  | `qwen/qwen3.8-flash` | 9/9 | 7,0 s | 18,0 s |
+  | `nvidia/nemotron-3.5-super-vl:free` | 9/9 | 4,4 s | 7,9 s |
+
+  Son más rápidos que los mismos modelos en OpenCode Go (ver la entrada anterior).
+- **Qué hizo falta para que anduvieran:**
+  - **`max_tokens: 4096`.** Sin un tope, OpenRouter reserva crédito para la salida máxima del
+    modelo (65 000 a 131 000 tokens) y responde 402 aunque el pedido cueste centavos.
+  - **`gpt-5.4-mini` no admite `temperature`.** Con `require_parameters: true` (solo proveedores
+    que respeten el esquema), OpenRouter respondía 404 "no endpoints". Se agregó la convención de
+    que un parámetro en `null` en el YAML no se manda.
+  - **`glm-5.3-flash` y `gemini-3.8-flash` razonan siempre.** Se les pide el menor esfuerzo, y el
+    tope de 4096 deja margen para el razonamiento.
+  - **`ling-3.2-flash:free` devolvió 429.** Los modelos gratuitos tienen un cupo diario chico; no
+    se sumó al YAML.
+- **Pedidos de punta a punta por el servidor**, combinando proveedores en cada pedido:
+  - whisper local + nemotron de OpenRouter: "Hecho", 9 s;
+  - mimo de OpenCode + nemotron de OpenRouter: "Hecho", 9 s;
+  - whisper local + glm-5.3-flash de OpenRouter: "Hecho", 5 s;
+  - whisper de OpenRouter + glm de OpenCode: 503 "Transcripción (openrouter): … 402: This request
+    requires at least $0.50 in balance for audio". El error dice qué etapa cambiar.
+- **Otros resultados:**
+  - Pasan 145 tests sin servicios externos, y los contratos reales de local y OpenCode (18 tests)
+    después de la migración.
+- **Transcripción, con saldo cargado** (US$ 5). Cuatro audios: el ejemplo, silencio, ruido y el
+  ejemplo cortado a la mitad. Los mismos audios contra todos los transcriptores:
+
+  | Modelo | Ejemplo | Silencio / ruido | Pedido cortado |
+  |---|---|---|---|
+  | `local/whisper-small` | ✓ 3,2 s | **"[MÚSICA]" / "[Sonido de la ventana]"** | "pone el canal 1 a 5" |
+  | `opencode-go/mimo-v2.6-flash` | ✓ 4,6 s | vacío | "Pone el canal uno aquí." |
+  | `openrouter/openai/whisper-large-v3-turbo` | ✓ 2,2 s | vacío | "pone el canal 1 a" (fiel) |
+  | `openrouter/openai/gpt-4o-mini-transcribe` | ✓ 2,1 s | vacío | "pone el canal uno a **quince**" (inventado) |
+  | `openrouter/mistralai/voxtral-mini-transcribe-3-0` | ✓ 2,6 s | vacío | "Pone el canal 1 a 500"; 429 en 2 de 6 pedidos |
+
+  - **whisper local con silencio o ruido escribía una anotación.** Como el texto no quedaba vacío,
+    llegaba al intérprete. Este riesgo existía desde el principio. Se corrigió: el adaptador borra
+    lo que va entre corchetes, paréntesis o asteriscos, y el silencio da texto vacío.
+  - **`gpt-4o-mini-transcribe` completa lo que no se dijo.** Para un sistema que ejecuta órdenes,
+    es peor que cortar. Queda en el YAML con la advertencia, pero el predeterminado de OpenRouter
+    es `whisper-large-v3-turbo`.
+  - Pedido completo por OpenRouter (whisper-large-v3-turbo + glm-5.3-flash): "Hecho" en 4,8 s, el
+    más rápido de todas las combinaciones probadas. El silencio se rechaza, con whisper local y
+    con el de OpenRouter, sin llamar al intérprete.
+  - Los 6 tests de contrato de los transcriptores de OpenRouter pasan.
+- **Documentado en:**
+  - [`servidor/README.md`](servidor/README.md), sección "Proveedores y modelos";
+  - [`docs/modelo_dominio.md`](docs/modelo_dominio.md), sección 4;
+  - [`app/front-web/README.md`](app/front-web/README.md).
+- **Próximo paso:**
+  - Grabar audios reales del laboratorio (varias voces, ruido de equipos, pedidos cortados) y repetir
+    la comparación con ellos: hoy hay un solo audio con voz.
+
+## 2026-11-20 — Modelos de OpenCode Go para el ASR y el intérprete
+- **Fase:** 1 (insumo para D3) · **Estado:** ✅ Funciona de punta a punta
+- **Objetivo:** probar modelos grandes en una demo con una sola suscripción (OpenCode Go), sin
+  tocar validación, ejecución ni API.
+- **Actividad:**
+  - Relevamiento de la API de Go. Es compatible con OpenAI (`/chat/completions`) y tiene unos 30
+    modelos. **No tiene un servicio de transcripción**: algunos modelos aceptan audio como entrada.
+  - Adaptador `opencode` del intérprete. Usa el mismo prompt y esquema que Qwen y Gemini, con
+    salida estructurada; si el modelo no la admite, reintenta sin esquema.
+  - Adaptador `opencode` del ASR. Transcribe con un modelo que acepta audio.
+  - Script `servidor.herramientas.comparar_modelos`, que corre el guion de prueba contra varios
+    modelos.
+  - docker-compose: `ASR_MOTOR` e `INTERPRETE` se pueden pisar desde la línea de comandos.
+- **Resultado del intérprete** (9 frases del guion, en paralelo, con salida estructurada):
+
+  | Modelo | Aciertos | Mediana | Máximo |
+  |---|---|---|---|
+  | `glm-5.3-flash` | 9/9 | 3,4 s | 11,5 s |
+  | `claude-haiku-5-5` | 9/9 | 3,4 s | 12,0 s |
+  | `mimo-v2.6-flash` | 9/9 | 6,6 s | 28,8 s |
+  | `glm-5.3` | 9/9 | 7,9 s | 21,4 s |
+  | `qwen3.8-max` | 9/9 | 9,4 s | 14,6 s |
+  | `kimi-k3` | 9/9 | 13,9 s | 38,8 s |
+  | `minimax-m3.1-flash` | 8/9 | 5,3 s | 11,3 s |
+  | `deepseek-v4.1-flash` | 0/9 | — | — |
+
+  - `minimax` falló una frase por un corte de conexión, no por interpretarla mal.
+  - `deepseek` responde 400 hasta habilitar la región "Global" en la consola.
+  - `claude-haiku-5-5` y `qwen3.8-max` usan en Go la API de Anthropic, pero funcionaron igual por
+    chat completions: la traducción entre APIs anda.
+  - Para comparar con Qwen3.5-4B local, ver la entrada del 2026-10-25.
+- **Resultado del ASR** (`ejemplo1.wav`; whisper local: "pone el canal 1 a 500 milivoltios por
+  división"):
+  - `mimo-v2.6-flash` y `mimo-v2.6-pro` transcriben bien en unos 3 s.
+  - `gemini-4-argon` no anda por esta API: "input_audio is not portable".
+  - **Hallazgo importante:** con un WAV de silencio, mimo devolvió un pedido completo inventado
+    con el vocabulario de las instrucciones ("poné el canal uno en cincuenta milivolts…, apretá el
+    autoset"). En el sistema real eso se habría ejecutado. Se corrigió en tres pasos:
+    instrucciones con una salida explícita (`[inaudible]`), que se convierte en texto vacío; el
+    pipeline rechaza una transcripción vacía sin llamar al intérprete; y el vocabulario queda
+    acotado a "escribir bien lo que se oye". Sin ese vocabulario, `mimo-v2.6-flash` escribió
+    "quinientos *mil voltios*". Con la corrección, silencio y ruido dan `[inaudible]` en los dos
+    modelos.
+  - Con el razonamiento prendido, mimo deja la respuesta vacía y pone el texto en el campo de
+    razonamiento. Se apaga por defecto (`reasoning_effort: none`).
+- **Otros resultados:**
+  - Pedido completo por Docker (audio → mimo → glm-5.3 → validación → instrumento simulado):
+    "Hecho", en unos 10 s.
+  - Pasan 101 tests sin servicios externos (eran 76) y el contrato de los dos adaptadores contra
+    OpenCode (9 tests).
+  - Bug corregido: un 400 por región apagaba la salida estructurada para siempre.
+  - Las pruebas de Gemini directo fallan por tiempo de espera agotado, sin relación con este cambio.
+- **Pendiente de uso:** Go está pensado para agentes de programación, y el FAQ de la consola dice
+  que las aplicaciones tienen que mandar un identificador de sesión. El adaptador lo manda, pero
+  esta clase de tráfico está en una zona gris. Para un uso continuo corresponde el pago por uso
+  (Zen), que se configura con `OPENCODE_URL` y `OPENCODE_MODELOS_URL`.
+- **Documentado en:** [`servidor/README.md`](servidor/README.md), sección "Modelos de OpenCode Go".
+- **Próximo paso:**
+  - Grabar más audios de ejemplo (frases del catálogo, ruido, pedidos cortados) para comparar el
+    ASR con algo más que un archivo.
+  - Generalizar los adaptadores por protocolo y proveedor (propuesta pendiente de aprobación).
+
+## 2026-11-13 — Conexión PyVISA con el osciloscopio real
+- **Fase:** 1 · **Estado:** 🟨 En curso (falta probarla con el equipo enchufado)
+- **Objetivo:** que el servidor pueda manejar el TBS1072B real, sin perder las garantías del
+  instrumento simulado.
+- **Actividad:**
+  - Adaptador `ConexionVisa` con pyvisa-py, que no necesita drivers del fabricante. Se elige con
+    `INSTRUMENTO=visa`; el modo por defecto sigue siendo el simulado en memoria.
+    - **Identidad:** busca por USB el equipo cuyo `*IDN?` nombra el modelo del catálogo y no se
+      conecta a otro.
+    - **Preparación:** al abrir envía `*CLS` y `HEADer OFF`.
+    - **Rechazos:** después de cada mensaje lee `*ESR?`. Un comando que el equipo rechaza, o una
+      medición sin dato (`9.9E37`), termina en un pedido rechazado con el motivo.
+    - **Acceso serializado:** la escritura y su verificación no se intercalan entre pedidos. Era
+      uno de los pendientes de la revisión del 2026-11-06.
+    - **Disponibilidad:** el servidor arranca sin el equipo y se reconecta solo. Sin equipo, un
+      pedido responde 503.
+  - Simulador pyvisa-sim del TBS1072B, con un segundo osciloscopio en el bus para probar que no
+    se confunde de equipo.
+  - Docker: `libusb` en la imagen y el bus USB del host montado en el contenedor, para poder
+    enchufar el equipo con el servidor andando.
+  - El front muestra si el instrumento está conectado.
+- **Resultado:**
+  - Pasan 76 tests sin servicios externos (eran 57). Entre ellos, las diez acciones del catálogo
+    por PyVISA contra el simulador.
+  - En el contenedor con `INSTRUMENTO=visa` y sin equipo, `/salud` informa "no conectado" y un
+    pedido recibe 503 con "No se encontró un TBS1072B".
+  - **No se probó con el equipo**: no estaba conectado.
+- **Documentado en:** [`servidor/README.md`](servidor/README.md), sección "Conectar el
+  osciloscopio real", y [`instrumentos/tektronix_tbs1072b.md`](instrumentos/tektronix_tbs1072b.md).
+- **Próximo paso:**
+  - Enchufar el TBS1072B y verificar cada comando a mano, anotando `*IDN?`, el firmware, la
+    cadena VISA y los rangos reales.
+  - Confirmar que pyvisa-py le saca el dispositivo al driver `usbtmc` del kernel.
+
 ## 2026-11-13 — Instrumento definido: Tektronix TBS1072B, con catálogo de diez acciones
 - **Fase:** 0 (cierra D1) y 1 · **Estado:** 🟨 En curso (falta verificar sobre el equipo)
 - **Objetivo:** relevar del manual de programación los comandos del osciloscopio del laboratorio y

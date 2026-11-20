@@ -17,6 +17,9 @@ class InstrumentoFake:
         clave, _, valor = comando.strip().partition(" ")
         self.estado[clave.upper()] = valor
 
+    def salud(self) -> bool:
+        return True
+
     def consultar(self, comando: str) -> str:
         self.historial.append(comando)
         if comando.strip().upper() == "*IDN?":

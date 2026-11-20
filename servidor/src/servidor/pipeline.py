@@ -1,11 +1,12 @@
 """Orquestador de la cascada: grabación → transcripción → intención → validación → ejecución.
 
-Recibe los modelos por sus puertos: no sabe cuál está detrás de cada uno.
+Recibe los modelos por sus puertos: no sabe cuál está detrás de cada uno. Cada pedido puede elegir
+otros (el selector del front); si no, se usan los predeterminados.
 """
 
 import asyncio
 
-from .dominio.errores import InteraccionInexistente
+from .dominio.errores import InteraccionInexistente, ModeloNoDisponible, RechazoDelInstrumento
 from .dominio.modelos import (
     CatalogoInstrumento,
     ComandoSCPI,
@@ -34,16 +35,36 @@ class ProcesarPedido:
         self.asr = asr
         self.interprete = interprete
         self.catalogo = catalogo
-        self._ejecutor = ejecutor
+        self.ejecutor = ejecutor
         self._umbral = umbral_confianza
         self._pendientes: dict[str, Interaccion] = {}
 
-    async def procesar(self, grabacion: Grabacion, contexto: Contexto) -> Interaccion:
-        transcripcion = await self.asr.transcribir(grabacion)
-        return await self.procesar_transcripcion(transcripcion, contexto)
+    async def procesar(
+        self, grabacion: Grabacion, contexto: Contexto,
+        asr: MotorASR | None = None, interprete: Interprete | None = None,
+    ) -> Interaccion:
+        asr = asr or self.asr
+        try:
+            transcripcion = await asr.transcribir(grabacion)
+        except ModeloNoDisponible as e:
+            # El respaldo es manual: el mensaje dice qué etapa cambiar.
+            raise ModeloNoDisponible(f"Transcripción ({asr.info().proveedor}): {e}") from e
+        return await self.procesar_transcripcion(transcripcion, contexto, interprete)
 
-    async def procesar_transcripcion(self, transcripcion: Transcripcion, contexto: Contexto) -> Interaccion:
-        intencion = await self.interprete.interpretar(transcripcion, self.catalogo, contexto)
+    async def procesar_transcripcion(
+        self, transcripcion: Transcripcion, contexto: Contexto, interprete: Interprete | None = None,
+    ) -> Interaccion:
+        if not transcripcion.texto.strip():
+            # Sin texto no hay nada que interpretar: un modelo de lenguaje podría inventar un pedido.
+            return Interaccion(
+                transcripcion=transcripcion, estado=EstadoInteraccion.RECHAZADA,
+                mensaje="No se entendió el audio. Repetí el pedido.",
+            )
+        interprete = interprete or self.interprete
+        try:
+            intencion = await interprete.interpretar(transcripcion, self.catalogo, contexto)
+        except ModeloNoDisponible as e:
+            raise ModeloNoDisponible(f"Intérprete ({interprete.info().proveedor}): {e}") from e
         base = {"transcripcion": transcripcion, "intencion": intencion}
 
         if intencion.tipo == TipoIntencion.FUERA_DE_ALCANCE:
@@ -81,7 +102,15 @@ class ProcesarPedido:
 
     async def _ejecutar(self, interaccion: Interaccion) -> Interaccion:
         comando = interaccion.comando
-        resultado = await asyncio.to_thread(self._ejecutor.ejecutar, comando)
+        try:
+            resultado = await asyncio.to_thread(self.ejecutor.ejecutar, comando)
+        except RechazoDelInstrumento as e:
+            # El validador lo dejó pasar pero el equipo no: se informa como rechazo, con su motivo.
+            # InstrumentoNoDisponible no se atrapa acá: no es una respuesta del equipo (API: 503).
+            rechazo = Rechazo(motivo=str(e))
+            return interaccion.model_copy(update={
+                "estado": EstadoInteraccion.RECHAZADA, "mensaje": rechazo.motivo, "rechazo": rechazo,
+            })
         consulta = comando.escritura is None
         lectura = f" El instrumento responde: {resultado.lectura}." if resultado.lectura is not None else ""
         return interaccion.model_copy(update={

@@ -58,13 +58,24 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - ASR_MOTOR=whisper_cpp
-      - ASR_URL=http://whisper:8080
-      - INTERPRETE=llama_cpp
+      # Modelos predeterminados (el front puede elegir otros en cada pedido). Valores:
+      # `proveedor/modelo` o `proveedor` de servidor/src/servidor/proveedores.yaml. Ej.:
+      #   INTERPRETE=openrouter docker compose up -d servidor
+      - ASR_MOTOR=${ASR_MOTOR:-whisper_cpp}
+      - ASR_URL=http://whisper:8080  # la usa proveedores.yaml para el proveedor `local`
+      - INTERPRETE=${INTERPRETE:-llama_cpp}
       - LLM_URL=http://llm:8080
+      # fake: osciloscopio en memoria. visa: el TBS1072B real por USB (INSTRUMENTO=visa docker compose up -d).
+      - INSTRUMENTO=${INSTRUMENTO:-fake}
+    # El bus USB entero y no un dispositivo fijo: así el osciloscopio se puede enchufar con el
+    # servidor andando. 189 es el número mayor de los dispositivos USB en Linux.
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+    device_cgroup_rules:
+      - "c 189:* rmw"
     env_file:
       - path: ./servidor/.env  # GEMINI_API_KEY, etc.; lo de arriba tiene prioridad
-        required: false
+        required: false  # OPENCODE_API_KEY, OPENROUTER_API_KEY...
     depends_on:
       - whisper
       - llm

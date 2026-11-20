@@ -16,7 +16,19 @@ Abrir `http://localhost:5173` y aceptar el permiso de micrófono. **Mantener pre
 la barra espaciadora) mientras se habla y soltar para enviar. Un toque de menos de 300 ms se
 descarta.
 
-- Arriba se ve si el servidor responde y qué modelo hay detrás de cada etapa (`GET /salud`).
+- Arriba se ve si el servidor y el instrumento responden (`GET /salud/instrumento`). Se consulta
+  cada 5 s, salvo durante un pedido o con la pestaña oculta, y en el momento con "Revisar". Con el
+  equipo real dice "✓ conectado" con su número de serie y firmware; al pasar el mouse, la
+  respuesta completa a `*IDN?` y la cadena VISA.
+- **Selector de modelos:** para la transcripción y para el intérprete se elige el proveedor (Local,
+  OpenCode Go, OpenRouter) y el modelo (`GET /modelos`). La lista sale de
+  `servidor/src/servidor/proveedores.yaml`: el front no tiene ninguna propia.
+  - ✓ o ✗ indica si cada uno responde. Un modelo sin su clave aparece deshabilitado, con el motivo.
+  - Al cambiar de proveedor se elige su modelo predeterminado.
+  - La elección se recuerda en el navegador y viaja con cada pedido.
+  - **El respaldo es manual:** si un pedido falla porque un proveedor no responde, el error dice
+    qué etapa falló, y se elige otro en el selector. "↻ Actualizar disponibilidad" vuelve a
+    consultar el estado.
 - La tarjeta muestra el último pedido: transcripción, intención, comando SCPI y lectura del
   instrumento, o el motivo del rechazo.
 - Una acción sensible o con confianza baja pide **Confirmar / Cancelar**

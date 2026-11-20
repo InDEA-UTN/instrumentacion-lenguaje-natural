@@ -41,8 +41,16 @@ class Interprete(Modelo, Protocol):
 
 
 class ConexionInstrumento(Protocol):
-    """Canal hacia el instrumento: PyVISA real, pyvisa-sim o un fake en memoria."""
+    """Canal hacia el instrumento: PyVISA real, pyvisa-sim o un fake en memoria.
+
+    `escribir` y `consultar` lanzan InstrumentoNoDisponible si no hay comunicación y
+    RechazoDelInstrumento si el equipo rechaza el comando.
+    """
 
     def escribir(self, comando: str) -> None: ...
 
     def consultar(self, comando: str) -> str: ...
+
+    def salud(self) -> bool:
+        """True si el instrumento responde. No lanza excepciones."""
+        ...

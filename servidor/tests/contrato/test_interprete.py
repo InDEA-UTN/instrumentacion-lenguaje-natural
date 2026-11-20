@@ -2,25 +2,17 @@
 
 import pytest
 
+from servidor.config import Configuracion
 from servidor.dominio.modelos import Contexto, Intencion, ModeloInfo, TipoIntencion, Transcripcion
 from servidor.dominio.puertos import Interprete
-from servidor.config import Configuracion
-from servidor.interpretacion.fake import InterpreteFake
-from servidor.interpretacion.gemini import Gemini
-from servidor.interpretacion.llama_cpp import LlamaCpp
+from servidor.proveedores import RegistroModelos
 
+# Todos los intérpretes declarados en proveedores.yaml. El de prueba corre siempre; los reales, con
+# -m integracion (y se saltean si no responden o falta su clave). Uno solo: -k "opencode-go/glm".
+_REGISTRO = RegistroModelos(Configuracion().proveedores)
 IMPLEMENTACIONES = [
-    pytest.param(lambda: InterpreteFake(), id="fake"),
-    pytest.param(
-        lambda: Gemini(api_key=(c := Configuracion()).gemini_api_key, modelo=c.gemini_modelo),
-        id="gemini",
-        marks=pytest.mark.integracion,
-    ),
-    pytest.param(
-        lambda: LlamaCpp(url=(c := Configuracion()).llm_url, modelo=c.llm_modelo, timeout_s=c.llm_timeout_s),
-        id="llama_cpp",
-        marks=pytest.mark.integracion,
-    ),
+    pytest.param(id_, id=id_, marks=() if id_.startswith("prueba/") else pytest.mark.integracion)
+    for id_ in _REGISTRO.ids("interprete", visibles=False)
 ]
 
 ASR = ModeloInfo(nombre="test", proveedor="test", version="0", ubicacion="local")
@@ -32,7 +24,7 @@ def _t(texto: str) -> Transcripcion:
 
 @pytest.fixture(params=IMPLEMENTACIONES)
 async def interprete(request) -> Interprete:
-    interprete = request.param()
+    interprete = _REGISTRO.interprete(request.param)
     if not await interprete.salud():
         pytest.skip(f"{interprete.info().nombre} no está disponible")
     return interprete

@@ -14,7 +14,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=8.0", "pytest-asyncio>=0.23"]
+dev = ["pytest>=8.0", "pytest-asyncio>=0.23", "pyvisa-sim>=0.7"]
+# Conexión con el instrumento real (INSTRUMENTO=visa). pyvisa-py no necesita drivers del fabricante.
+visa = ["pyvisa>=1.14", "pyvisa-py>=0.8", "pyusb>=1.2"]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -25,7 +27,7 @@ where = ["src"]
 
 [tool.setuptools.package-data]
 # Los catálogos viajan con el paquete: la ruta por defecto funciona instalado o en modo editable.
-servidor = ["catalogos/*.yaml"]
+servidor = ["catalogos/*.yaml", "simuladores/*.yaml", "proveedores.yaml"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
