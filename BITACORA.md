@@ -33,6 +33,27 @@ pasos. Es la memoria del proyecto y el insumo del informe final.
 
 ---
 
+## 2026-11-20 — El front muestra en vivo si el osciloscopio está conectado
+- **Fase:** 1 · **Estado:** 🟨 En curso (falta probarlo con el equipo enchufado)
+- **Objetivo:** saber desde el front, sin recargar, si el equipo está conectado y cuál es.
+- **Actividad:**
+  - `GET /salud/instrumento`: le pregunta `*IDN?` al equipo en el momento y, si respondió,
+    devuelve la respuesta y la cadena VISA. Va aparte de `/salud`, que además consulta a los
+    proveedores de modelos: consultarlo seguido le pegaría a sus listados en la nube.
+  - Si el equipo deja de responder, la identidad no se informa: no queda la del último.
+  - Front: consulta cada 5 s, salvo durante un pedido o con la pestaña oculta, y nunca apila
+    consultas. Botón "Revisar" para hacerlo en el momento.
+  - Con el equipo dice "✓ conectado", con el número de serie y el firmware; al pasar el mouse,
+    la respuesta completa a `*IDN?` y la cadena VISA, que hay que anotar en la ficha.
+- **Resultado:**
+  - Pasan 147 tests sin servicios externos (eran 145). Uno usa el simulador para probar que se
+    informa la identidad y que deja de informarse al perder el equipo.
+  - En Docker con `INSTRUMENTO=visa` y sin equipo, cada consulta tarda unos 1 s y responde "no
+    conectado".
+- **Documentado en:** [`servidor/README.md`](servidor/README.md) y
+  [`app/front-web/README.md`](app/front-web/README.md).
+- **Próximo paso:** enchufar el TBS1072B y anotar en la ficha lo que muestra el front.
+
 ## 2026-11-20 — Proveedores intercambiables, selector en el front y OpenRouter como respaldo
 - **Fase:** 1 (insumo para D3 y la etapa 4) · **Estado:** ✅ Funciona de punta a punta, incluida la transcripción de OpenRouter
 - **Objetivo:**

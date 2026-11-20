@@ -50,12 +50,29 @@ async def salud():
     return {
         "asr": {**p.asr.info().model_dump(), "listo": await p.asr.salud()},
         "interprete": {**p.interprete.info().model_dump(), "listo": await p.interprete.salud()},
-        "instrumento": {
-            **p.catalogo.instrumento.model_dump(),
-            "conexion": type(p.ejecutor.conexion).__name__,
-            "listo": await asyncio.to_thread(p.ejecutor.conexion.salud),
-            "idn_conectado": getattr(p.ejecutor.conexion, "idn", None),
-        },
+        "instrumento": await _estado_instrumento(),
+    }
+
+
+@app.get("/salud/instrumento")
+async def salud_instrumento():
+    """Solo el instrumento. El front lo consulta cada pocos segundos: /salud entero consultaría
+    además a los proveedores de modelos (en la nube, un pedido a su listado cada vez)."""
+    return await _estado_instrumento()
+
+
+async def _estado_instrumento() -> dict:
+    p = app.state.pipeline
+    conexion = p.ejecutor.conexion
+    # Le pregunta *IDN? al equipo ahora: "listo" es que respondió, no un dato guardado.
+    listo = await asyncio.to_thread(conexion.salud)
+    return {
+        **p.catalogo.instrumento.model_dump(),
+        "conexion": type(conexion).__name__,
+        "listo": listo,
+        # Con qué equipo se habló. Solo si respondió: después de desenchufarlo quedaría el anterior.
+        "idn_conectado": getattr(conexion, "idn", None) if listo else None,
+        "recurso_conectado": getattr(conexion, "recurso", None) if listo else None,
     }
 
 

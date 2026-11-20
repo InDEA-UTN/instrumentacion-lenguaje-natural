@@ -16,7 +16,10 @@ Abrir `http://localhost:5173` y aceptar el permiso de micrófono. **Mantener pre
 la barra espaciadora) mientras se habla y soltar para enviar. Un toque de menos de 300 ms se
 descarta.
 
-- Arriba se ve si el servidor y el instrumento responden (`GET /salud`).
+- Arriba se ve si el servidor y el instrumento responden (`GET /salud/instrumento`). Se consulta
+  cada 5 s, salvo durante un pedido o con la pestaña oculta, y en el momento con "Revisar". Con el
+  equipo real dice "✓ conectado" con su número de serie y firmware; al pasar el mouse, la
+  respuesta completa a `*IDN?` y la cadena VISA.
 - **Selector de modelos:** para la transcripción y para el intérprete se elige el proveedor (Local,
   OpenCode Go, OpenRouter) y el modelo (`GET /modelos`). La lista sale de
   `servidor/src/servidor/proveedores.yaml`: el front no tiene ninguna propia.

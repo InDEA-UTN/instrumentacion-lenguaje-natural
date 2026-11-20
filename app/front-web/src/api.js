@@ -41,6 +41,11 @@ export async function salud() {
   return leer(await fetch(`${SERVIDOR_URL}/salud`))
 }
 
+// Solo el instrumento: le pregunta *IDN? al equipo en el momento. Es lo que se consulta seguido.
+export async function saludInstrumento() {
+  return leer(await fetch(`${SERVIDOR_URL}/salud/instrumento`))
+}
+
 export async function modelos(refrescar = false) {
   return leer(await fetch(`${SERVIDOR_URL}/modelos${refrescar ? '?refrescar=true' : ''}`))
 }

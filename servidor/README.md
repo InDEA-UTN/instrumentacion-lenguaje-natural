@@ -69,6 +69,7 @@ O todo junto desde la raíz: `docker compose up -d` (servidor en el puerto 8000)
 | Endpoint | Qué hace |
 |---|---|
 | `GET /salud` | Los modelos predeterminados, el instrumento y si responden. |
+| `GET /salud/instrumento` | Solo el instrumento: le pregunta `*IDN?` en el momento y, si respondió, con qué equipo habló (`idn_conectado`, `recurso_conectado`). El front lo consulta cada 5 s. |
 | `GET /modelos` | Por etapa, los proveedores con sus modelos y si están disponibles (el selector del front). `?refrescar=true` no usa la consulta guardada (30 s). |
 | `POST /pedidos` | Audio (`multipart`, campo `audio`; opcionales `sesion`, `asr` e `interprete` con un `proveedor/modelo` de `/modelos`) → `Interaccion`. Un modelo no declarado da 422. |
 | `POST /confirmaciones/{id}` | `{"aceptar": true}` ejecuta una acción que quedó pendiente de confirmación. |
@@ -202,7 +203,10 @@ pip install -e '.[visa]'
 INSTRUMENTO=visa uvicorn servidor.api.app:app
 ```
 
-La línea de salud del front pasa a decir "TBS1072B ✓ conectado". Qué hace la conexión:
+La línea del instrumento en el front pasa a decir "TBS1072B ✓ conectado", con el número de serie y
+el firmware. Se actualiza sola cada 5 s, así que se ve enchufarlo o desenchufarlo sin recargar.
+Al pasar el mouse muestra la respuesta completa a `*IDN?` y la cadena VISA, que hay que anotar en
+la ficha del instrumento. Qué hace la conexión:
 
 - **Busca el equipo sola.** Pregunta `*IDN?` a cada instrumento USB y elige el que nombra el
   `modelo` del catálogo. `VISA_RECURSO` fija la cadena VISA si hace falta. Con un modelo

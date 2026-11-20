@@ -30,6 +30,33 @@ def test_salud(cliente):
     assert r["instrumento"]["id"] == "tektronix_tbs1072b"
 
 
+def test_salud_del_instrumento_simulado(cliente):
+    r = cliente.get("/salud/instrumento").json()
+    assert r["id"] == "tektronix_tbs1072b" and r["modelo"] == "TBS1072B"
+    assert r["conexion"] == "InstrumentoFake" and r["listo"] is True
+
+
+def test_salud_del_instrumento_por_visa(cliente):
+    # El simulador del TBS1072B: la API informa con qué equipo habló, y deja de hacerlo al perderlo.
+    pytest.importorskip("pyvisa_sim")
+    import servidor
+    from servidor.ejecucion import ConexionVisa
+
+    conexion = ConexionVisa(modelo="TBS1072B", backend=f"{servidor.__path__[0]}/simuladores/tektronix_tbs1072b.yaml@sim")
+    cliente.app.state.pipeline.ejecutor.conexion = conexion
+    try:
+        r = cliente.get("/salud/instrumento").json()
+        assert r["conexion"] == "ConexionVisa" and r["listo"] is True
+        assert r["idn_conectado"].startswith("TEKTRONIX,TBS1072B,C010001")
+        assert "C010001" in r["recurso_conectado"]
+
+        conexion.salud = lambda: False  # como si lo desenchufaran
+        r = cliente.get("/salud/instrumento").json()
+        assert r["listo"] is False and r["idn_conectado"] is None and r["recurso_conectado"] is None
+    finally:
+        conexion.cerrar()
+
+
 def test_confirmar_actualiza_el_contexto_de_la_sesion(cliente):
     pendiente = _decir(cliente, "hacé un autoset")
     assert pendiente["estado"] == "confirmacion_pendiente"
